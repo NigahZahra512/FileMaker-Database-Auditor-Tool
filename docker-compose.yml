@@ -1,0 +1,19 @@
+# DAY 5: docker-compose.yml
+# --------------------------------------------------------------------
+# One command to run the whole tool: docker compose up
+# No manual pip install, no manual "python main.py" -- Docker builds
+# the image from the Dockerfile and starts it automatically.
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      # required: false means `docker compose up` no longer fails if
+      # you haven't created a .env file yet -- you can also just paste
+      # your API key into the app's Settings panel in the browser
+      # (stored in server memory only) instead of using a .env file at all.
+      - path: .env
+        required: false
+    restart: unless-stopped
