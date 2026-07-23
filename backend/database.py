@@ -167,20 +167,31 @@ class Snapshot(Base):
 
 
 class User(Base):
-    """STEP 7 (roadmap): Users / Login. Deliberately minimal -- no roles,
-    no email, no password reset flow. Anyone with an account can sign in
-    and use the whole tool; this is an access gate for a small internal
-    team, not a permissions system."""
+    """STEP 7 (roadmap): Users / Login.
+
+    GROUP B FEATURE: Master / Sub-Account Hierarchy
+    -------------------------------------------------
+    There is exactly one "master" account, seeded automatically the
+    first time the app starts (see seed_master_account()) with a fixed
+    email/password rather than being whoever happens to sign up first.
+    Only the master can create or remove other ("sub") accounts, and
+    only the master can be the one who created another master -- in
+    practice that never happens because nothing in this app ever
+    creates a second master. Sub-accounts can log in and use the whole
+    tool and can change their own password, but cannot manage users.
+    """
 
     __tablename__ = "users"
     __table_args__ = (UniqueConstraint("username", name="uq_user_username"),)
 
     id = Column(Integer, primary_key=True)
-    username = Column(String(120), nullable=False)
+    username = Column(String(120), nullable=False)  # holds the login email, e.g. sohaibkhan2030@gmail.com
     # "<salt_hex>$<pbkdf2_hex>" -- see _hash_password(). stdlib-only
     # (hashlib.pbkdf2_hmac) on purpose, so this feature doesn't need a
     # new dependency like bcrypt/passlib in requirements.txt.
     password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False, default="sub")  # "master" or "sub"
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -217,6 +228,59 @@ def init_db() -> None:
     """Create the .db file and tables if they don't exist yet. Safe to
     call on every app startup -- create_all() no-ops on existing tables."""
     Base.metadata.create_all(bind=engine)
+    _migrate_user_columns()
+    seed_master_account()
+
+
+def _migrate_user_columns() -> None:
+    """create_all() only creates tables that don't exist yet -- it never
+    alters an existing one. Anyone updating from a version of this app
+    before the master/sub-account feature already has a `users` table
+    without `role`/`created_by_id`, so add those columns by hand if
+    they're missing. Safe to run on every startup: each ALTER is
+    skipped once the column is already there."""
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()}
+        if "role" not in existing:
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'sub'")
+        if "created_by_id" not in existing:
+            conn.exec_driver_sql("ALTER TABLE users ADD COLUMN created_by_id INTEGER")
+        conn.commit()
+        # Anyone who already had an account before this feature existed
+        # (i.e. every row still holding the ALTER's 'sub' default) can't
+        # be left with zero masters -- the oldest account becomes master.
+        has_master = conn.exec_driver_sql("SELECT COUNT(*) FROM users WHERE role = 'master'").scalar()
+        if not has_master:
+            oldest_id = conn.exec_driver_sql("SELECT id FROM users ORDER BY id ASC LIMIT 1").scalar()
+            if oldest_id is not None:
+                conn.exec_driver_sql("UPDATE users SET role = 'master' WHERE id = :id", {"id": oldest_id})
+                conn.commit()
+
+
+MASTER_EMAIL = "sohaibkhan2030@gmail.com"
+MASTER_DEFAULT_PASSWORD = "qwerty123"
+
+
+def seed_master_account() -> None:
+    """The one and only master account is created automatically the
+    first time this app ever runs, with a fixed email and starting
+    password -- not by whoever happens to be the first visitor (that
+    was the old /api/auth/bootstrap behavior, now retired). The master
+    can change this password afterwards from the Users screen; this
+    only ever fires once, when the users table is completely empty."""
+    if count_users() > 0:
+        return
+    db = SessionLocal()
+    try:
+        user = User(
+            username=MASTER_EMAIL,
+            password_hash=_hash_password(MASTER_DEFAULT_PASSWORD),
+            role="master",
+        )
+        db.add(user)
+        db.commit()
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -637,36 +701,61 @@ def count_users() -> int:
         db.close()
 
 
-def create_user(username: str, password: str) -> dict:
+def create_user(username: str, password: str, role: str = "sub", created_by_id: int | None = None) -> dict:
     username = username.strip()
     if not username:
-        raise ValueError("Email cannot be empty.")
+        raise ValueError("Username cannot be empty.")
     if len(password) < 6:
         raise ValueError("Password must be at least 6 characters.")
+    if role not in ("master", "sub"):
+        raise ValueError("Role must be 'master' or 'sub'.")
     db = SessionLocal()
     try:
         clash = db.query(User).filter(User.username == username).first()
         if clash:
-            raise ValueError(f'A user with email "{username}" already exists.')
-        user = User(username=username, password_hash=_hash_password(password))
+            raise ValueError(f'A user named "{username}" already exists.')
+        user = User(
+            username=username,
+            password_hash=_hash_password(password),
+            role=role,
+            created_by_id=created_by_id,
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
-        return {"id": user.id, "username": user.username}
+        return {"id": user.id, "username": user.username, "role": user.role}
     finally:
         db.close()
 
 
 def verify_user(username: str, password: str) -> dict | None:
-    """Returns {"id", "username"} on a correct username+password, else None
-    -- never distinguishes "no such user" from "wrong password" to the
-    caller, so main.py can't leak which usernames exist."""
+    """Returns {"id", "username", "role"} on a correct username+password,
+    else None -- never distinguishes "no such user" from "wrong password"
+    to the caller, so main.py can't leak which usernames exist."""
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username.strip()).first()
         if not user or not _verify_password(password, user.password_hash):
             return None
-        return {"id": user.id, "username": user.username}
+        return {"id": user.id, "username": user.username, "role": user.role}
+    finally:
+        db.close()
+
+
+def change_password(user_id: int, current_password: str, new_password: str) -> None:
+    """Any logged-in user (master or sub) can change their own password
+    this way -- e.g. the master rotating the fixed seeded password after
+    first login. Requires the current password, same as any normal
+    account settings page."""
+    if len(new_password) < 6:
+        raise ValueError("New password must be at least 6 characters.")
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user or not _verify_password(current_password, user.password_hash):
+            raise ValueError("Current password is incorrect.")
+        user.password_hash = _hash_password(new_password)
+        db.commit()
     finally:
         db.close()
 
@@ -693,7 +782,7 @@ def get_user_by_session(token: str | None) -> dict | None:
         user = db.query(User).filter(User.id == sess.user_id).first()
         if not user:
             return None
-        return {"id": user.id, "username": user.username}
+        return {"id": user.id, "username": user.username, "role": user.role}
     finally:
         db.close()
 
@@ -710,11 +799,12 @@ def delete_session(token: str) -> None:
 def list_users() -> list[dict]:
     db = SessionLocal()
     try:
-        users = db.query(User).order_by(User.username.asc()).all()
+        users = db.query(User).order_by(User.role.desc(), User.username.asc()).all()
         return [
             {
                 "id": u.id,
                 "username": u.username,
+                "role": u.role,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
             for u in users
@@ -726,7 +816,10 @@ def list_users() -> list[dict]:
 def delete_user(user_id: int) -> bool:
     """Refuses to delete the last remaining account -- otherwise the tool
     would become permanently unreachable (no login screen path back in
-    without editing the database by hand)."""
+    without editing the database by hand) -- and refuses to delete a
+    master account at all, since sub-accounts are the only kind this
+    app ever creates after the seeded master, and the app needs at
+    least one master able to manage users."""
     db = SessionLocal()
     try:
         total = db.query(User).count()
@@ -735,40 +828,12 @@ def delete_user(user_id: int) -> bool:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             return False
+        if user.role == "master":
+            raise ValueError("The master account cannot be removed.")
         db.query(UserSession).filter(UserSession.user_id == user_id).delete()
         db.delete(user)
         db.commit()
         return True
-    finally:
-        db.close()
-
-
-def change_password(user_id: int, old_password: str, new_password: str) -> None:
-    """Fills the one real gap in the minimal Users/Login design: an
-    account with no way to change its own password would leave whoever
-    forgot theirs permanently locked out (if they're the only user) or
-    dependent on a teammate deleting+recreating their account (if not).
-
-    Requires the CURRENT password to confirm the change (like the
-    reference tool's own Profile > Change Password screen) -- this is a
-    self-service change for someone still logged in, not a "forgot
-    password while locked out" recovery flow. That gap remains: with no
-    email/SMTP configured, a locked-out SOLE admin still has no way back
-    in except direct database access. Worth flagging to Sohaib if that
-    scenario matters -- the fix would need either a mail server or a
-    separate out-of-band reset mechanism.
-    """
-    if len(new_password) < 6:
-        raise ValueError("New password must be at least 6 characters.")
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise ValueError("User not found.")
-        if not _verify_password(old_password, user.password_hash):
-            raise ValueError("Current password is incorrect.")
-        user.password_hash = _hash_password(new_password)
-        db.commit()
     finally:
         db.close()
 

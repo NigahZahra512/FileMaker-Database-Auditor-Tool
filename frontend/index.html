@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <title>FileMaker Database Auditor Tool</title>
+<script>
+  // Runs before the stylesheet paints anything, so returning visitors
+  // don't see a flash of dark mode before switching to their saved
+  // light-mode choice (or vice versa).
+  (function () {
+    try {
+      if (localStorage.getItem("fm-theme") === "light") {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    } catch (err) { /* localStorage unavailable -- default theme stays */ }
+  })();
+</script>
 <style>
   :root {
     --bg: #0A0B14;
@@ -32,6 +44,28 @@
     --radius: 10px;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
     --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.38);
+  }
+
+  /* GROUP B feature: light/dark theme toggle. Every rule in this
+     stylesheet is written against the variables above, so a light
+     theme is just a second set of values for the same names -- no
+     component CSS below needs to know which theme is active. */
+  html[data-theme="light"] {
+    --bg: #F5F6FA;
+    --surface: #FFFFFF;
+    --surface-alt: #F0F1F7;
+    --surface-raised: #E8E9F3;
+    --border: #DCDEEA;
+    --border-strong: #C5C8DC;
+    --text: #1B1D2B;
+    --text-muted: #62657D;
+    --brand-soft: rgba(108, 99, 255, 0.10);
+    --accent-soft: rgba(23, 217, 196, 0.10);
+    --critical-bg: rgba(255, 107, 94, 0.08);
+    --warning-bg: rgba(255, 180, 84, 0.08);
+    --info-bg: rgba(52, 211, 153, 0.08);
+    --shadow-sm: 0 1px 2px rgba(20, 20, 40, 0.06);
+    --shadow-md: 0 8px 28px rgba(20, 20, 40, 0.10);
   }
 
   * { box-sizing: border-box; }
@@ -222,6 +256,7 @@
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   .settings-btn:hover { background: var(--surface-raised); border-color: var(--brand); }
+  .theme-toggle-btn { padding: 8px 10px; }
   .settings-btn.configured { color: var(--info); border-color: var(--info-border); }
 
   /* Settings modal */
@@ -338,6 +373,38 @@
     transition: background 0.15s ease;
   }
   button.secondary:hover { background: var(--surface-alt); border-color: var(--brand); color: var(--brand); }
+
+  /* Highlighted download buttons (Download Report / Download DOCX) — sky blue */
+  button.btn-download {
+    background: #87ceeb;
+    border: 1px solid #5bb8dd;
+    color: #063a52;
+  }
+  button.btn-download:hover { background: #6bbfdc; border-color: #4aa9cc; color: #04283a; }
+
+  /* Variables tab: status pills */
+  .var-status { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+  .var-status-ok { background:#e6f4ea; color:#1e7a34; }
+  .var-status-write-only { background:#fdecec; color:#c62828; }
+  .var-status-read-only { background:#fff6e0; color:#a86a00; }
+  .var-name { font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; color:var(--brand); font-weight:600; cursor:pointer; }
+  .var-name:hover { text-decoration:underline; }
+
+  /* ERD tab: cluster/orphan cards */
+  .erd-cluster-card { padding:12px 16px; margin-bottom:10px; }
+  .erd-cluster-title { font-weight:700; margin-bottom:6px; }
+  .erd-table-chip { display:inline-block; background:var(--surface-alt); border:1px solid var(--border); border-radius:6px; padding:3px 10px; margin:3px; font-size:12.5px; }
+  .erd-table-chip.orphan { background:#fdecec; border-color:#f3c0c0; color:#c62828; }
+
+  /* Health tab: score gauge */
+  .health-score-card { display:flex; align-items:center; gap:28px; padding:22px 24px; flex-wrap:wrap; }
+  .health-score-number { font-size:52px; font-weight:800; line-height:1; }
+  .health-score-number.grade-a, .health-score-number.grade-b { color:#1e7a34; }
+  .health-score-number.grade-c { color:#a86a00; }
+  .health-score-number.grade-d, .health-score-number.grade-f { color:#c62828; }
+  .health-grade-badge { display:inline-block; margin-left:10px; font-size:20px; font-weight:800; padding:2px 12px; border-radius:8px; background:var(--surface-alt); border:1px solid var(--border-strong); vertical-align:middle; }
+  .health-penalty-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .health-penalty-row:last-child { border-bottom:none; }
 
   .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 0 0 18px; }
   .summary-pill {
@@ -796,6 +863,27 @@
   .explore-row { cursor: pointer; }
   .explore-row:hover { background: var(--brand-soft); }
   .explore-row td { border-bottom: 1px solid var(--border); }
+  .deep-audit-link { color: var(--brand); font-weight: 600; font-size: 12.5px; text-decoration: none; white-space: nowrap; }
+  .deep-audit-link:hover { text-decoration: underline; }
+  .table-audit-detail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 12px 0 4px; }
+
+  /* Deep Audit full-page view */
+  .deep-audit-breadcrumb { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .deep-audit-breadcrumb a { color: var(--text-muted); text-decoration: none; }
+  .deep-audit-breadcrumb a:hover { color: var(--brand); text-decoration: underline; }
+  .deep-audit-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  .deep-audit-title { font-size: 26px; font-weight: 800; color: var(--text); margin: 0; }
+  .deep-audit-subtitle { font-size: 13px; color: var(--text-muted); margin: 4px 0 18px; }
+  .deep-audit-toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+  .deep-audit-banner { padding: 14px 18px; border-radius: 10px; font-weight: 700; text-align: center; margin-bottom: 20px; }
+  .deep-audit-banner.ok { background: #e3f6e8; color: #1c7a34; }
+  .deep-audit-banner.warn { background: #fdf1de; color: #a2650f; }
+  .deep-audit-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .deep-audit-stat-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px 10px; text-align: center; background: var(--surface, #fff); }
+  .deep-audit-stat-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1.15; }
+  .deep-audit-stat-value.warn { color: #a2650f; }
+  .deep-audit-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+  .deep-audit-note { font-size: 13px; color: var(--text-muted); margin: 4px 0 12px; }
   .explore-empty-row td { color: var(--text-muted); text-align: center; padding: 24px 0; }
 </style>
 </head>
@@ -804,8 +892,10 @@
 <div class="top-accent"></div>
 
 <!-- Auth overlay: covers the whole app until someone is signed in.
-     Shows either a normal login form, or -- only while the database has
-     zero user accounts -- a one-time "create the first account" form. -->
+     The very first (master) account already exists from the moment
+     the app is installed -- see database.seed_master_account() -- so
+     this is always just a normal sign-in form, never a "create the
+     first account" form. -->
 <div class="modal-overlay auth-overlay open" id="auth-overlay">
   <div class="modal">
     <div class="modal-header">
@@ -815,23 +905,12 @@
 
     <form id="auth-form-login" style="display:none;">
       <label class="field-label" for="auth-login-username">Email</label>
-      <input type="text" id="auth-login-username" class="field-input" autocomplete="username" placeholder="e.g. user@domain.com">
+      <input type="email" id="auth-login-username" class="field-input" autocomplete="username">
       <label class="field-label" for="auth-login-password">Password</label>
       <input type="password" id="auth-login-password" class="field-input" autocomplete="current-password">
       <div class="modal-footer">
         <span></span>
         <button type="submit" class="action">Sign in</button>
-      </div>
-    </form>
-
-    <form id="auth-form-bootstrap" style="display:none;">
-      <label class="field-label" for="auth-bootstrap-username">Choose an email</label>
-      <input type="text" id="auth-bootstrap-username" class="field-input" autocomplete="username" placeholder="e.g. user@domain.com">
-      <label class="field-label" for="auth-bootstrap-password">Choose a password (6+ characters)</label>
-      <input type="password" id="auth-bootstrap-password" class="field-input" autocomplete="new-password" minlength="6">
-      <div class="modal-footer">
-        <span></span>
-        <button type="submit" class="action">Create account</button>
       </div>
     </form>
 
@@ -847,6 +926,10 @@
       <p>DDR analysis, AI script review, and AI SQL review — all in one place.</p>
     </div>
     <div style="display:flex; align-items:center; gap:10px;">
+      <button class="settings-btn theme-toggle-btn" id="theme-toggle-btn" title="Switch light/dark mode">
+        <svg id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
       <span class="header-auth-badge" id="header-auth-badge"></span>
       <button class="settings-btn" id="users-open-btn" title="Manage users">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="16" height="16">
@@ -854,6 +937,10 @@
           <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
         </svg>
         Users
+      </button>
+      <button class="settings-btn" id="change-password-open-btn" title="Change your password">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Password
       </button>
       <button class="settings-btn" id="header-logout-btn" title="Log out">Log out</button>
       <button class="settings-btn" id="settings-open-btn" title="AI provider settings">
@@ -916,35 +1003,39 @@
       <h2>Manage Users</h2>
       <button class="modal-close" id="users-close-btn">&times;</button>
     </div>
-    <p class="modal-hint">Anyone with an account can sign in and use this tool.</p>
+    <p class="modal-hint">The master account can add or remove sub-accounts. Everyone can sign in and use the whole tool.</p>
 
     <div id="users-list"></div>
 
     <form id="users-add-form" style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
-      <label class="field-label" for="users-add-username">New email</label>
-      <input type="text" id="users-add-username" class="field-input" placeholder="e.g. user@domain.com">
+      <label class="field-label" for="users-add-username">New sub-account's email</label>
+      <input type="email" id="users-add-username" class="field-input">
       <label class="field-label" for="users-add-password">Password (6+ characters)</label>
       <input type="password" id="users-add-password" class="field-input" minlength="6">
       <div class="modal-footer">
         <span id="users-add-status"></span>
-        <button type="submit" class="action">Add User</button>
+        <button type="submit" class="action">Add Sub-Account</button>
       </div>
     </form>
+  </div>
+</div>
 
-    <!-- Change Password: a logged-in account changing its OWN password.
-         Does NOT cover a locked-out sole admin who's forgotten their
-         only password -- no email/SMTP is configured, so there's no
-         recovery link. That case still needs direct database access
-         or a teammate's account. -->
-    <form id="change-password-form" style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
-      <p class="modal-hint" style="margin-top:0;">Change your own password</p>
-      <label class="field-label" for="change-password-old">Current password</label>
-      <input type="password" id="change-password-old" class="field-input">
+<div class="modal-overlay" id="change-password-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Change Password</h2>
+      <button class="modal-close" id="change-password-close-btn">&times;</button>
+    </div>
+    <p class="modal-hint">Change the password for the account you're currently signed in as.</p>
+
+    <form id="change-password-form">
+      <label class="field-label" for="change-password-current">Current password</label>
+      <input type="password" id="change-password-current" class="field-input" autocomplete="current-password">
       <label class="field-label" for="change-password-new">New password (6+ characters)</label>
-      <input type="password" id="change-password-new" class="field-input" minlength="6">
+      <input type="password" id="change-password-new" class="field-input" minlength="6" autocomplete="new-password">
       <div class="modal-footer">
         <span id="change-password-status"></span>
-        <button type="submit" class="action">Change Password</button>
+        <button type="submit" class="action">Update Password</button>
       </div>
     </form>
   </div>
@@ -969,6 +1060,18 @@
     <button class="tab-btn" data-tab="sql-audit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M8 12h8M8 16h5"/></svg>
       ExecuteSQL Audit
+    </button>
+    <button class="tab-btn" data-tab="variables">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3m0 12v3m8-18v3m0 12v3M4 8h3m10 0h3M4 16h3m10 0h3"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>
+      Variables
+    </button>
+    <button class="tab-btn" data-tab="erd">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="6" rx="1.2"/><rect x="14" y="3" width="7" height="6" rx="1.2"/><rect x="8.5" y="15" width="7" height="6" rx="1.2"/><path d="M6.5 9v3.5h9.5V9M12 12.5V15"/></svg>
+      ERD
+    </button>
+    <button class="tab-btn" data-tab="health">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6c0 4.7-8.8 10.4-8.8 10.4S3.2 13.3 3.2 8.6a4.6 4.6 0 018.8-1.9 4.6 4.6 0 018.8 1.9z"/><path d="M7 11h2l1.5-3L12.5 14 14 11h3"/></svg>
+      Health Score
     </button>
     <button class="tab-btn" data-tab="snapshots">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1072,6 +1175,55 @@
     <div id="sql-audit-list"></div>
   </div>
 
+  <!-- Saved DDR Variable Tracking ($$Globals / $locals) -->
+  <div class="tab-panel" id="tab-variables">
+    <div class="card">
+      <p class="card-label">$$Variable Tracking</p>
+      <p class="card-hint">All $$global and $local variables in a saved DDR snapshot, with set/get locations. A variable that is only ever set (never read) is flagged as possible dead code.</p>
+      <div class="script-audit-toolbar">
+        <select id="variables-client-select"><option value="">All clients</option></select>
+        <select id="variables-snapshot-select"><option value="">Choose a snapshot...</option></select>
+        <input id="variables-search" type="search" placeholder="Search variable name...">
+      </div>
+    </div>
+    <div id="variables-stats-wrap"></div>
+    <div class="card explore-subtabs-card" id="variables-subtabs-card" style="display:none;">
+      <div class="explore-subtabs" id="variables-subtabs">
+        <button class="explore-subtab-btn active" data-var-tab="globals">$$Globals</button>
+        <button class="explore-subtab-btn" data-var-tab="locals">$Locals</button>
+      </div>
+    </div>
+    <div id="variables-list-wrap"></div>
+    <div id="variables-detail-wrap"></div>
+  </div>
+
+  <!-- Saved DDR ERD Overview -->
+  <div class="tab-panel" id="tab-erd">
+    <div class="card">
+      <p class="card-label">ERD Overview</p>
+      <p class="card-hint">Table relationship graph for a saved DDR snapshot — how many isolated clusters the tables fall into, and which tables have no relationships at all ("orphan tables").</p>
+      <div class="script-audit-toolbar">
+        <select id="erd-client-select"><option value="">All clients</option></select>
+        <select id="erd-snapshot-select"><option value="">Choose a snapshot...</option></select>
+      </div>
+    </div>
+    <div id="erd-stats-wrap"></div>
+    <div id="erd-list-wrap"></div>
+  </div>
+
+  <!-- Saved DDR Health Score -->
+  <div class="tab-panel" id="tab-health">
+    <div class="card">
+      <p class="card-label">Health Score</p>
+      <p class="card-hint">One overall score (0–100) for a saved DDR snapshot, combining its saved Critical/Warning/Info findings with structural signals (unused fields/scripts, always-evaluate calcs, unstored calcs, dead-code variables, orphan tables).</p>
+      <div class="script-audit-toolbar">
+        <select id="health-client-select"><option value="">All clients</option></select>
+        <select id="health-snapshot-select"><option value="">Choose a snapshot...</option></select>
+      </div>
+    </div>
+    <div id="health-wrap"></div>
+  </div>
+
   <!-- TAB 4: Snapshot History (its own page — separate from DDR Analysis) -->
   <div class="tab-panel" id="tab-snapshots">
     <div class="card">
@@ -1150,7 +1302,7 @@
 
   <!-- TAB 8: Explore (GROUP A feature) -->
   <div class="tab-panel" id="tab-explore">
-    <div class="card">
+    <div class="card" id="explore-intro-card">
       <p class="card-label">Explore</p>
       <p class="card-hint">Pick a saved snapshot, then browse every table, field, script, layout, and relationship it contains — click any row to see the full detail.</p>
       <p class="explore-meta-line" id="explore-meta-line"></p>
@@ -1174,6 +1326,7 @@
     </div>
     <div id="explore-list-wrap"></div>
     <div id="explore-detail-wrap"></div>
+    <div id="explore-deep-audit-view" style="display:none;"></div>
   </div>
 
   </main>
@@ -1187,11 +1340,17 @@ const API_BASE = ""; // same origin -- backend serves this file too
 // ---------------------------------------------------------------------
 // STEP 7 (roadmap): Users / Login
 //
+// GROUP B FEATURE: Master / Sub-Account Hierarchy -- the master account
+// always exists from the moment the app is installed (seeded on the
+// backend), so this is always a plain sign-in form now, never a
+// "create the first account" form.
+//
 // The session itself is an HttpOnly cookie set by the backend, so every
 // existing fetch() call elsewhere in this file already sends it
 // automatically (same-origin) -- nothing about those calls needed to
 // change. This block only needs to: show/hide the auth overlay, handle
-// the login/bootstrap forms, and re-run the app's own data-loading
+// the login form, track who's signed in (and their role, for the
+// master-only UI below), and re-run the app's own data-loading
 // functions once someone is actually signed in.
 // ---------------------------------------------------------------------
 
@@ -1199,35 +1358,31 @@ const authOverlay = document.getElementById("auth-overlay");
 const authTitle = document.getElementById("auth-title");
 const authHint = document.getElementById("auth-hint");
 const authFormLogin = document.getElementById("auth-form-login");
-const authFormBootstrap = document.getElementById("auth-form-bootstrap");
 const authError = document.getElementById("auth-error");
 const headerAuthBadge = document.getElementById("header-auth-badge");
 const usersOverlay = document.getElementById("users-overlay");
+
+let currentUser = null; // { username, role } once signed in
 
 function showAuthError(message) {
   authError.textContent = message;
   authError.classList.add("show");
 }
 
-function showAuthOverlay(mode) {
+function showAuthOverlay() {
   authError.classList.remove("show");
   authOverlay.classList.add("open");
-  if (mode === "bootstrap") {
-    authTitle.textContent = "Create the first account";
-    authHint.textContent = "First time running this tool — create an account to get started. You can add teammates afterwards from the Users button.";
-    authFormBootstrap.style.display = "block";
-    authFormLogin.style.display = "none";
-  } else {
-    authTitle.textContent = "Sign in";
-    authHint.textContent = "Enter your email and password to continue.";
-    authFormBootstrap.style.display = "none";
-    authFormLogin.style.display = "block";
-  }
+  authTitle.textContent = "Sign in";
+  authHint.textContent = "Enter your email and password to continue.";
+  authFormLogin.style.display = "block";
 }
 
-function hideAuthOverlay(username) {
+function hideAuthOverlay(username, role) {
   authOverlay.classList.remove("open");
-  headerAuthBadge.textContent = `Signed in as ${username}`;
+  currentUser = { username, role };
+  headerAuthBadge.textContent = `Signed in as ${username}${role === "master" ? " (master)" : ""}`;
+  // Only the master account manages users -- everyone else never sees this button.
+  document.getElementById("users-open-btn").style.display = role === "master" ? "inline-flex" : "none";
 }
 
 // These are the same top-level functions this file already calls once
@@ -1237,13 +1392,8 @@ function hideAuthOverlay(username) {
 // before anyone was authenticated and got silent 401s.
 function reloadAppDataAfterLogin() {
   loadSettingsStatus();
-  loadScriptAuditSnapshotOptions();
   loadClients();
-  refreshSnapshots();
-  loadTableAuditSnapshotOptions();
-  loadTimeline();
-  loadDashboard();
-  loadExploreSnapshotOptions();
+  refreshAllSnapshotDependentLists();
 }
 
 async function checkAuthStatus() {
@@ -1251,11 +1401,9 @@ async function checkAuthStatus() {
     const res = await fetch(`${API_BASE}/api/auth/status`);
     const status = await res.json();
     if (status.logged_in) {
-      hideAuthOverlay(status.username);
-    } else if (status.has_users) {
-      showAuthOverlay("login");
+      hideAuthOverlay(status.username, status.role);
     } else {
-      showAuthOverlay("bootstrap");
+      showAuthOverlay();
     }
   } catch (err) {
     authTitle.textContent = "Can't reach the server";
@@ -1276,27 +1424,7 @@ authFormLogin.addEventListener("submit", async (e) => {
     });
     const data = await res.json();
     if (!res.ok) { showAuthError(data.detail || "Could not sign in."); return; }
-    hideAuthOverlay(data.username);
-    reloadAppDataAfterLogin();
-  } catch (err) {
-    showAuthError("Could not reach the backend: " + err.message);
-  }
-});
-
-authFormBootstrap.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  authError.classList.remove("show");
-  const username = document.getElementById("auth-bootstrap-username").value.trim();
-  const password = document.getElementById("auth-bootstrap-password").value;
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/bootstrap`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) { showAuthError(data.detail || "Could not create this account."); return; }
-    hideAuthOverlay(data.username);
+    hideAuthOverlay(data.username, data.role);
     reloadAppDataAfterLogin();
   } catch (err) {
     showAuthError("Could not reach the backend: " + err.message);
@@ -1313,7 +1441,81 @@ document.getElementById("header-logout-btn").addEventListener("click", async () 
 });
 
 // ---------------------------------------------------------------------
-// Manage Users modal
+// GROUP B FEATURE: Light / Dark theme toggle
+//
+// The whole stylesheet is written against CSS variables (see the
+// html[data-theme="light"] block up top), so switching themes is just
+// flipping one attribute on <html> and remembering the choice for next
+// time. A tiny inline script in <head> applies the saved choice before
+// first paint, so there's no flash of the wrong theme on reload.
+// ---------------------------------------------------------------------
+
+function setTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.getElementById("theme-icon-dark").style.display = "none";
+    document.getElementById("theme-icon-light").style.display = "inline";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    document.getElementById("theme-icon-dark").style.display = "inline";
+    document.getElementById("theme-icon-light").style.display = "none";
+  }
+  try { localStorage.setItem("fm-theme", theme); } catch (err) { /* ignore */ }
+}
+
+document.getElementById("theme-toggle-btn").addEventListener("click", () => {
+  const isLight = document.documentElement.getAttribute("data-theme") === "light";
+  setTheme(isLight ? "dark" : "light");
+});
+
+// Sync the header icon with whatever the inline <head> script already
+// applied before this script ran (it can only set the attribute, not
+// know about these icon elements which didn't exist yet at that point).
+setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+// ---------------------------------------------------------------------
+// GROUP B FEATURE: Change Password (any signed-in account, master or
+// sub, changes its own password -- this is how the master rotates the
+// fixed seeded starting password after first login).
+// ---------------------------------------------------------------------
+
+const changePasswordOverlay = document.getElementById("change-password-overlay");
+
+document.getElementById("change-password-open-btn").addEventListener("click", () => {
+  document.getElementById("change-password-form").reset();
+  document.getElementById("change-password-status").textContent = "";
+  document.getElementById("change-password-status").className = "";
+  changePasswordOverlay.classList.add("open");
+});
+document.getElementById("change-password-close-btn").addEventListener("click", () => changePasswordOverlay.classList.remove("open"));
+changePasswordOverlay.addEventListener("click", (e) => { if (e.target === changePasswordOverlay) changePasswordOverlay.classList.remove("open"); });
+
+document.getElementById("change-password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const statusEl = document.getElementById("change-password-status");
+  const current_password = document.getElementById("change-password-current").value;
+  const new_password = document.getElementById("change-password-new").value;
+  statusEl.textContent = "Updating...";
+  statusEl.className = "";
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ current_password, new_password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { statusEl.textContent = data.detail || "Could not update password."; statusEl.className = "error"; return; }
+    statusEl.textContent = "Password updated.";
+    document.getElementById("change-password-form").reset();
+  } catch (err) {
+    statusEl.textContent = "Could not reach the backend.";
+    statusEl.className = "error";
+  }
+});
+
+// ---------------------------------------------------------------------
+// Manage Users modal (master account only -- the header button that
+// opens this is hidden for sub-accounts in hideAuthOverlay() above)
 // ---------------------------------------------------------------------
 
 document.getElementById("users-open-btn").addEventListener("click", () => {
@@ -1329,14 +1531,18 @@ async function loadUsersList() {
   try {
     const res = await fetch(`${API_BASE}/api/auth/users`);
     const users = await res.json();
+    if (!res.ok) {
+      listEl.innerHTML = `<p class="card-hint">${escapeHtml(users.detail || "Could not load users.")}</p>`;
+      return;
+    }
     if (!Array.isArray(users) || !users.length) {
       listEl.innerHTML = `<p class="card-hint">No users yet.</p>`;
       return;
     }
     listEl.innerHTML = users.map(u => `
       <div class="user-row">
-        <span>${escapeHtml(u.username)}</span>
-        <button class="secondary" data-id="${u.id}" data-name="${escapeHtml(u.username)}">Remove</button>
+        <span>${escapeHtml(u.username)} ${u.role === "master" ? `<span class="flag-badge flag-ok">Master</span>` : `<span class="flag-badge">Sub-account</span>`}</span>
+        ${u.role === "master" ? "" : `<button class="secondary" data-id="${u.id}" data-name="${escapeHtml(u.username)}">Remove</button>`}
       </div>`).join("");
     listEl.querySelectorAll("button[data-id]").forEach(btn => {
       btn.addEventListener("click", () => deleteUserConfirm(btn.dataset.id, btn.dataset.name));
@@ -1377,30 +1583,6 @@ document.getElementById("users-add-form").addEventListener("submit", async (e) =
     document.getElementById("users-add-username").value = "";
     document.getElementById("users-add-password").value = "";
     loadUsersList();
-  } catch (err) {
-    statusEl.textContent = "Could not reach the backend.";
-    statusEl.className = "error";
-  }
-});
-
-document.getElementById("change-password-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const statusEl = document.getElementById("change-password-status");
-  const oldPassword = document.getElementById("change-password-old").value;
-  const newPassword = document.getElementById("change-password-new").value;
-  statusEl.textContent = "Saving...";
-  statusEl.className = "";
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/change-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
-    });
-    const data = await res.json();
-    if (!res.ok) { statusEl.textContent = data.detail || "Could not change password."; statusEl.className = "error"; return; }
-    statusEl.textContent = "Password changed.";
-    document.getElementById("change-password-old").value = "";
-    document.getElementById("change-password-new").value = "";
   } catch (err) {
     statusEl.textContent = "Could not reach the backend.";
     statusEl.className = "error";
@@ -1648,8 +1830,8 @@ function renderReport(containerId, report, sourceLabel, tabKey) {
       </table>
       <div class="toolbar">
         <span></span>
-        <button class="secondary" data-tab-key="${tabKey}" onclick="downloadReportForTab(this.dataset.tabKey)">Download Report</button>
-        <button class="secondary" data-tab-key="${tabKey}" onclick="downloadDocxForTab(this.dataset.tabKey)">Download DOCX</button>
+        <button class="secondary btn-download" data-tab-key="${tabKey}" onclick="downloadReportForTab(this.dataset.tabKey)">Download Report</button>
+        <button class="secondary btn-download" data-tab-key="${tabKey}" onclick="downloadDocxForTab(this.dataset.tabKey)">Download DOCX</button>
       </div>
     </div>
   `;
@@ -1777,8 +1959,8 @@ function renderDDRReport(containerId, report, sourceLabel, tabKey) {
       ${categorySectionsHtml(findings, tabKey)}
       <div class="toolbar">
         <span></span>
-        <button class="secondary" data-tab-key="${tabKey}" onclick="downloadReportForTab(this.dataset.tabKey)">Download Report</button>
-        <button class="secondary" data-tab-key="${tabKey}" onclick="downloadDocxForTab(this.dataset.tabKey)">Download DOCX</button>
+        <button class="secondary btn-download" data-tab-key="${tabKey}" onclick="downloadReportForTab(this.dataset.tabKey)">Download Report</button>
+        <button class="secondary btn-download" data-tab-key="${tabKey}" onclick="downloadDocxForTab(this.dataset.tabKey)">Download DOCX</button>
       </div>
     </div>
   `;
@@ -1928,62 +2110,8 @@ function downloadReport(report, sourceLabel, tabKey) {
 }
 
 // ---------------------------------------------------------------------
-// Helper to automatically select a newly uploaded or loaded snapshot across all tabs
-async function selectSnapshotGlobally(snapshot) {
-  await loadClients();
-
-  // Update Table Audit
-  const tableClient = document.getElementById("table-audit-client-select");
-  if (tableClient) {
-    tableClient.value = snapshot.client_id;
-    await loadTableAuditSnapshotOptions();
-    document.getElementById("table-audit-snapshot-select").value = snapshot.id;
-    await loadTableAuditGrid();
-  }
-
-  // Update Script Audit
-  const scriptClient = document.getElementById("script-audit-client-select");
-  if (scriptClient) {
-    scriptClient.value = snapshot.client_id;
-    await loadScriptAuditSnapshotOptions();
-    document.getElementById("script-audit-snapshot-select").value = snapshot.id;
-    await loadScriptAuditList();
-  }
-
-  // Update ExecuteSQL Audit
-  const sqlClient = document.getElementById("sql-audit-client-select");
-  if (sqlClient) {
-    sqlClient.value = snapshot.client_id;
-    await loadSqlAuditSnapshotOptions();
-    document.getElementById("sql-audit-snapshot-select").value = snapshot.id;
-    await loadSqlAuditList();
-  }
-
-  // Update Explore
-  const exploreClient = document.getElementById("explore-client-select");
-  if (exploreClient) {
-    exploreClient.value = snapshot.client_id;
-    await loadExploreSnapshotOptions();
-    document.getElementById("explore-snapshot-select").value = snapshot.id;
-    await loadExploreData();
-  }
-
-  // Update Snapshot History
-  const historyClient = document.getElementById("ddr-snapshot-client-select");
-  if (historyClient) {
-    historyClient.value = snapshot.client_id;
-    await refreshSnapshotSolutionFilter();
-    refreshSnapshots();
-  }
-
-  // Update Timeline
-  const timelineClient = document.getElementById("timeline-client-select");
-  if (timelineClient) {
-    timelineClient.value = snapshot.client_id;
-    await loadTimeline();
-  }
-}
-
+// Tab 1: DDR analysis
+// ---------------------------------------------------------------------
 document.getElementById("ddr-run-btn").addEventListener("click", async () => {
   const fileInput = document.getElementById("ddr-file");
   if (!fileInput.files.length) {
@@ -1992,12 +2120,17 @@ document.getElementById("ddr-run-btn").addEventListener("click", async () => {
   }
   showLoading("ddr-results");
 
+  const saveSnapshot = document.getElementById("ddr-save-snapshot").checked;
   const clientName = document.getElementById("ddr-client-name").value.trim();
   const solutionName = document.getElementById("ddr-solution-name").value.trim();
+  if (saveSnapshot && !clientName) {
+    showError("ddr-results", "Enter a client name to save this as a snapshot, or uncheck the save option.");
+    return;
+  }
 
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
-  formData.append("save_snapshot", "true");
+  formData.append("save_snapshot", saveSnapshot);
   if (clientName) formData.append("client_name", clientName);
   if (solutionName) formData.append("solution_name", solutionName);
 
@@ -2006,8 +2139,12 @@ document.getElementById("ddr-run-btn").addEventListener("click", async () => {
     const report = await res.json();
     renderDDRReport("ddr-results", report, "DDR: " + fileInput.files[0].name, "ddr");
 
+    // STEP 1 (roadmap): if the backend saved a snapshot, refresh every
+    // dropdown that lists snapshots so it shows up immediately, without
+    // needing a full page reload.
     if (report.snapshot) {
-      await selectSnapshotGlobally(report.snapshot);
+      loadClients();
+      refreshAllSnapshotDependentLists();
     } else if (report.snapshot_error) {
       alert("Analysis succeeded, but saving the snapshot failed: " + report.snapshot_error);
     }
@@ -2063,11 +2200,13 @@ async function loadClients() {
       allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.snapshot_count})</option>`).join("");
     sqlAuditSelect.value = prevSqlAuditValue;
 
-    const exploreSelect = document.getElementById("explore-client-select");
-    const prevExploreValue = exploreSelect.value;
-    exploreSelect.innerHTML = `<option value="">All clients</option>` +
-      allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.snapshot_count})</option>`).join("");
-    exploreSelect.value = prevExploreValue;
+    for (const prefix of ["variables", "erd", "health"]) {
+      const sel = document.getElementById(`${prefix}-client-select`);
+      const prevVal = sel.value;
+      sel.innerHTML = `<option value="">All clients</option>` +
+        allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.snapshot_count})</option>`).join("");
+      sel.value = prevVal;
+    }
   } catch (err) {
     // Non-fatal -- the rest of the DDR tab still works without this.
     console.error("Could not load clients:", err);
@@ -2117,6 +2256,25 @@ async function refreshSnapshotSolutionFilter() {
   } catch (err) {
     console.error("Could not load solutions for filter:", err);
   }
+}
+
+// Bug fix: several places that change what snapshots exist (saving a
+// new one, renaming/deleting a client/solution/snapshot) used to only
+// refresh 2 of the 5 places snapshots are listed -- so a freshly saved
+// snapshot could be invisible on the Explore or Table Audit tab until
+// the next login. One shared helper now covers all of them, so a
+// future 6th tab only needs to be added in this one place.
+function refreshAllSnapshotDependentLists() {
+  refreshSnapshots();
+  loadScriptAuditSnapshotOptions();
+  loadTableAuditSnapshotOptions();
+  loadExploreSnapshotOptions();
+  loadTimeline();
+  loadDashboard();
+  loadVariablesSnapshotOptions();
+  loadErdSnapshotOptions();
+  loadHealthSnapshotOptions();
+  loadSqlAuditSnapshotOptions();
 }
 
 async function refreshSnapshots() {
@@ -2328,7 +2486,7 @@ document.getElementById("script-audit-search").addEventListener("input", renderS
 loadScriptAuditSnapshotOptions();
 
 // ---------------------------------------------------------------------
-// Saved-DDR ExecuteSQL Audit
+// ExecuteSQL Audit tab: SQL steps found directly in a saved DDR snapshot
 // ---------------------------------------------------------------------
 let sqlAuditRows = [];
 
@@ -2349,41 +2507,37 @@ async function loadSqlAuditSnapshotOptions() {
   }
 }
 
-function sqlIssueHtml(issue) {
-  return `<span class="script-issue script-issue-${issue.severity.toLowerCase()}" title="${escapeHtml(issue.detail)}">${escapeHtml(issue.label)}</span>`;
-}
-
 function renderSqlAuditList() {
   const list = document.getElementById("sql-audit-list");
   const query = document.getElementById("sql-audit-search").value.trim().toLowerCase();
-  const rows = sqlAuditRows.filter(row => !query || [row.script_name, row.step_name, row.expression,
+  const rows = sqlAuditRows.filter(row => !query || [row.script_name, row.expression,
     ...row.issues.map(issue => `${issue.label} ${issue.detail}`)].join(" ").toLowerCase().includes(query));
   if (!rows.length) {
     list.innerHTML = `<div class="card"><div class="dashboard-empty">No ExecuteSQL steps match this search.</div></div>`;
     return;
   }
-  list.innerHTML = `<div class="card"><div style="overflow:auto"><table><thead><tr><th>Script (Step)</th><th>Step Name</th><th>SQL Expression</th><th>Audit flags</th></tr></thead><tbody>${rows.map(row => `
+  list.innerHTML = `<div class="card"><div style="overflow:auto"><table><thead><tr><th>Script</th><th>Step</th><th>Expression</th><th>Flags</th></tr></thead><tbody>${rows.map(row => `
     <tr>
-      <td><strong>${escapeHtml(row.script_name)} (Step ${row.position})</strong></td>
-      <td>${escapeHtml(row.step_name)}</td>
-      <td class="script-step-text" style="font-family:monospace; font-size:12px;">${escapeHtml(row.expression)}</td>
-      <td>${row.issues.length ? row.issues.map(sqlIssueHtml).join("") : `<span class="script-issue script-issue-info">No static flags</span>`}</td>
+      <td><strong>${escapeHtml(row.script_name)}</strong></td>
+      <td>#${row.position ?? ""} ${escapeHtml(row.step_name || "")}</td>
+      <td class="script-step-text">${escapeHtml(row.expression || "")}</td>
+      <td>${row.issues.length ? row.issues.map(scriptIssueHtml).join("") : `<span class="script-issue script-issue-info">No static flags</span>`}</td>
     </tr>`).join("")}</tbody></table></div></div>`;
 }
 
 async function loadSqlAuditList() {
   const snapshotId = document.getElementById("sql-audit-snapshot-select").value;
   const list = document.getElementById("sql-audit-list");
-  if (!snapshotId) { list.innerHTML = ""; return; }
+  if (!snapshotId) { sqlAuditRows = []; list.innerHTML = ""; return; }
   list.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ExecuteSQL steps...</div></div>`;
   try {
     const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/sql-audit`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not load SQL audit.");
+    if (!res.ok) throw new Error(data.error || "Could not load ExecuteSQL steps.");
     sqlAuditRows = data.queries;
     renderSqlAuditList();
   } catch (err) {
-    list.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load SQL audit: ${escapeHtml(err.message)}</div></div>`;
+    list.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load ExecuteSQL steps: ${escapeHtml(err.message)}</div></div>`;
   }
 }
 
@@ -2391,6 +2545,233 @@ document.getElementById("sql-audit-client-select").addEventListener("change", lo
 document.getElementById("sql-audit-snapshot-select").addEventListener("change", loadSqlAuditList);
 document.getElementById("sql-audit-search").addEventListener("input", renderSqlAuditList);
 loadSqlAuditSnapshotOptions();
+
+// ---------------------------------------------------------------------
+// Variables tab: $$Global / $local variable tracking
+// ---------------------------------------------------------------------
+let variablesData = null;
+let variablesActiveTab = "globals";
+
+async function loadVariablesSnapshotOptions() {
+  const clientId = document.getElementById("variables-client-select").value;
+  const select = document.getElementById("variables-snapshot-select");
+  select.innerHTML = `<option value="">Loading snapshots...</option>`;
+  document.getElementById("variables-stats-wrap").innerHTML = "";
+  document.getElementById("variables-subtabs-card").style.display = "none";
+  document.getElementById("variables-list-wrap").innerHTML = "";
+  document.getElementById("variables-detail-wrap").innerHTML = "";
+  try {
+    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
+    const snapshots = await (await fetch(url)).json();
+    select.innerHTML = snapshots.length
+      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
+          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
+      : `<option value="">No saved snapshots</option>`;
+  } catch (err) {
+    select.innerHTML = `<option value="">Could not load snapshots</option>`;
+  }
+}
+
+function varStatusHtml(status) {
+  const cls = status === "OK" ? "var-status-ok" : status === "Read-only" ? "var-status-read-only" : "var-status-write-only";
+  return `<span class="var-status ${cls}">${escapeHtml(status)}</span>`;
+}
+
+function renderVariablesStats() {
+  const wrap = document.getElementById("variables-stats-wrap");
+  if (!variablesData) { wrap.innerHTML = ""; return; }
+  const s = variablesData.stats;
+  wrap.innerHTML = `<div class="card explore-stats-strip">
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_globals}</div><div class="explore-stat-label">$$Global Variables</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_locals}</div><div class="explore-stat-label">$Local Variables</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value accent">${s.write_only_count}</div><div class="explore-stat-label">Write-only (dead code?)</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.read_only_globals_count}</div><div class="explore-stat-label">Read-only Globals</div></div>
+  </div>`;
+}
+
+function renderVariablesList() {
+  const listWrap = document.getElementById("variables-list-wrap");
+  if (!variablesData) { listWrap.innerHTML = ""; return; }
+  const query = document.getElementById("variables-search").value.trim().toLowerCase();
+  const snapshotId = document.getElementById("variables-snapshot-select").value;
+  const rows = (variablesActiveTab === "globals" ? variablesData.globals : variablesData.locals)
+    .filter(r => !query || r.name.toLowerCase().includes(query));
+  if (!rows.length) {
+    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">No variables match this search.</div></div>`;
+    return;
+  }
+  listWrap.innerHTML = `<div class="card"><div style="overflow:auto"><table><thead><tr><th>Variable</th><th>Sets</th><th>Gets</th><th>Status</th></tr></thead><tbody>${rows.map(r => `
+    <tr>
+      <td><span class="var-name" onclick="loadVariableDetail(${snapshotId}, '${escapeHtml(r.name).replace(/'/g, "\\'")}')">${escapeHtml(r.name)}</span></td>
+      <td>${r.sets}</td>
+      <td>${r.gets}</td>
+      <td>${varStatusHtml(r.status)}</td>
+    </tr>`).join("")}</tbody></table></div></div>`;
+}
+
+async function loadVariablesData() {
+  const snapshotId = document.getElementById("variables-snapshot-select").value;
+  document.getElementById("variables-detail-wrap").innerHTML = "";
+  if (!snapshotId) {
+    variablesData = null;
+    document.getElementById("variables-stats-wrap").innerHTML = "";
+    document.getElementById("variables-subtabs-card").style.display = "none";
+    document.getElementById("variables-list-wrap").innerHTML = "";
+    return;
+  }
+  document.getElementById("variables-list-wrap").innerHTML = `<div class="card"><div class="dashboard-empty">Loading variables...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load variables.");
+    variablesData = data;
+    document.getElementById("variables-subtabs-card").style.display = "block";
+    renderVariablesStats();
+    renderVariablesList();
+  } catch (err) {
+    document.getElementById("variables-list-wrap").innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variables: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+async function loadVariableDetail(snapshotId, varName) {
+  const detailEl = document.getElementById("variables-detail-wrap");
+  detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ${escapeHtml(varName)}...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit/${encodeURIComponent(varName)}`);
+    const detail = await res.json();
+    if (!res.ok) throw new Error(detail.error || "Could not load variable detail.");
+    const locRow = (loc, kind) => `<div class="rel-row"><strong>${kind}</strong> — ${
+      loc.script_name ? `${escapeHtml(loc.script_name)} · step #${loc.position ?? ""} (${escapeHtml(loc.step_name || "")})`
+                       : `${escapeHtml(loc.table_name)}::${escapeHtml(loc.field_name)} (calculation)`
+    }<div class="script-step-text" style="margin-top:4px;">${escapeHtml(loc.text || "")}</div></div>`;
+    detailEl.innerHTML = `<div class="card">
+      <div class="table-detail-title"><div><p class="card-label" style="margin:0;">${escapeHtml(detail.name)}</p><p class="card-hint">${varStatusHtml(detail.status)} · Sets: ${detail.sets} · Gets: ${detail.gets}</p></div><button class="secondary" onclick="document.getElementById('variables-detail-wrap').innerHTML=''">Close</button></div>
+      <div class="table-detail-section"><div class="table-detail-section-title">Set locations (${detail.set_locations.length})</div>${detail.set_locations.length ? detail.set_locations.map(l => locRow(l, "Set")).join("") : `<div class="snapshot-empty">No Set Variable step found for this variable.</div>`}</div>
+      <div class="table-detail-section"><div class="table-detail-section-title">Get locations (${detail.get_locations.length})</div>${detail.get_locations.length ? detail.get_locations.map(l => locRow(l, "Get")).join("") : `<div class="snapshot-empty">This variable is never read anywhere detected.</div>`}</div>
+    </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variable detail: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+document.getElementById("variables-client-select").addEventListener("change", loadVariablesSnapshotOptions);
+document.getElementById("variables-snapshot-select").addEventListener("change", loadVariablesData);
+document.getElementById("variables-search").addEventListener("input", renderVariablesList);
+document.getElementById("variables-subtabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".explore-subtab-btn");
+  if (!btn) return;
+  variablesActiveTab = btn.dataset.varTab;
+  document.querySelectorAll("#variables-subtabs .explore-subtab-btn").forEach(b => b.classList.toggle("active", b === btn));
+  renderVariablesList();
+});
+loadVariablesSnapshotOptions();
+
+// ---------------------------------------------------------------------
+// ERD tab: table relationship graph overview (clusters / orphan tables)
+// ---------------------------------------------------------------------
+async function loadErdSnapshotOptions() {
+  const clientId = document.getElementById("erd-client-select").value;
+  const select = document.getElementById("erd-snapshot-select");
+  select.innerHTML = `<option value="">Loading snapshots...</option>`;
+  document.getElementById("erd-stats-wrap").innerHTML = "";
+  document.getElementById("erd-list-wrap").innerHTML = "";
+  try {
+    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
+    const snapshots = await (await fetch(url)).json();
+    select.innerHTML = snapshots.length
+      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
+          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
+      : `<option value="">No saved snapshots</option>`;
+  } catch (err) {
+    select.innerHTML = `<option value="">Could not load snapshots</option>`;
+  }
+}
+
+async function loadErdData() {
+  const snapshotId = document.getElementById("erd-snapshot-select").value;
+  const statsWrap = document.getElementById("erd-stats-wrap");
+  const listWrap = document.getElementById("erd-list-wrap");
+  if (!snapshotId) { statsWrap.innerHTML = ""; listWrap.innerHTML = ""; return; }
+  listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ERD overview...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/erd`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load ERD overview.");
+    const s = data.stats;
+    statsWrap.innerHTML = `<div class="card explore-stats-strip">
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_tables}</div><div class="explore-stat-label">Tables</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_relationships}</div><div class="explore-stat-label">Relationships</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.cluster_count}</div><div class="explore-stat-label">Clusters</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value accent">${s.orphan_table_count}</div><div class="explore-stat-label">Orphan Tables</div></div>
+    </div>`;
+    const clusterCards = data.clusters.map((c, i) => `<div class="card erd-cluster-card">
+      <div class="erd-cluster-title">Cluster ${i + 1} — ${c.size} table${c.size === 1 ? "" : "s"}</div>
+      ${c.tables.map(t => `<span class="erd-table-chip">${escapeHtml(t)}</span>`).join("")}
+    </div>`).join("");
+    const orphanCard = data.orphan_tables.length ? `<div class="card">
+      <p class="card-label" style="margin-bottom:8px;">Orphan Tables (no relationships)</p>
+      ${data.orphan_tables.map(t => `<span class="erd-table-chip orphan">${escapeHtml(t)}</span>`).join("")}
+    </div>` : "";
+    listWrap.innerHTML = orphanCard + clusterCards;
+  } catch (err) {
+    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load ERD overview: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+document.getElementById("erd-client-select").addEventListener("change", loadErdSnapshotOptions);
+document.getElementById("erd-snapshot-select").addEventListener("change", loadErdData);
+loadErdSnapshotOptions();
+
+// ---------------------------------------------------------------------
+// Health tab: one overall score, combining saved findings + structural stats
+// ---------------------------------------------------------------------
+async function loadHealthSnapshotOptions() {
+  const clientId = document.getElementById("health-client-select").value;
+  const select = document.getElementById("health-snapshot-select");
+  select.innerHTML = `<option value="">Loading snapshots...</option>`;
+  document.getElementById("health-wrap").innerHTML = "";
+  try {
+    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
+    const snapshots = await (await fetch(url)).json();
+    select.innerHTML = snapshots.length
+      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
+          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
+      : `<option value="">No saved snapshots</option>`;
+  } catch (err) {
+    select.innerHTML = `<option value="">Could not load snapshots</option>`;
+  }
+}
+
+async function loadHealthData() {
+  const snapshotId = document.getElementById("health-snapshot-select").value;
+  const wrap = document.getElementById("health-wrap");
+  if (!snapshotId) { wrap.innerHTML = ""; return; }
+  wrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading health score...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/health`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load health score.");
+    const gradeClass = `grade-${data.grade.toLowerCase()}`;
+    const penalties = data.penalties.length
+      ? data.penalties.map(p => `<div class="health-penalty-row"><span>${escapeHtml(p.label)} (${p.count})</span><span>-${p.points_lost} pts</span></div>`).join("")
+      : `<div class="snapshot-empty">No penalties found — nothing pulled the score down.</div>`;
+    wrap.innerHTML = `
+      <div class="card health-score-card">
+        <div class="health-score-number ${gradeClass}">${data.score}<span style="font-size:20px;">/100</span></div>
+        <div><span class="health-grade-badge">Grade ${escapeHtml(data.grade)}</span></div>
+      </div>
+      <div class="card">
+        <p class="card-label" style="margin-bottom:8px;">What's pulling the score down</p>
+        ${penalties}
+      </div>`;
+  } catch (err) {
+    wrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load health score: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+document.getElementById("health-client-select").addEventListener("change", loadHealthSnapshotOptions);
+document.getElementById("health-snapshot-select").addEventListener("change", loadHealthData);
+loadHealthSnapshotOptions();
 
 loadClients();
 refreshSnapshots();
@@ -2687,11 +3068,14 @@ function resetExploreView() {
   exploreData = null;
   exploreOpenKey = null;
   document.getElementById("explore-meta-line").textContent = "";
+  document.getElementById("explore-intro-card").style.display = "block";
   document.getElementById("explore-search-card").style.display = "none";
   document.getElementById("explore-stats-wrap").innerHTML = "";
   document.getElementById("explore-subtabs-card").style.display = "none";
   document.getElementById("explore-list-wrap").innerHTML = "";
   document.getElementById("explore-detail-wrap").innerHTML = "";
+  document.getElementById("explore-deep-audit-view").style.display = "none";
+  document.getElementById("explore-deep-audit-view").innerHTML = "";
 }
 
 async function loadExploreData() {
@@ -2774,7 +3158,7 @@ function renderExploreList() {
   if (exploreActiveTab === "tables") {
     const rows = exploreData.tables;
     if (!rows.length) { listWrap.innerHTML = emptyExploreCard("This snapshot has no tables."); return; }
-    listWrap.innerHTML = wrapExploreTable(["Table", "Records", "Fields", "Unused", "Unstored Calc", "Always-Eval"], tableRowsHtml(rows, snapshotId));
+    listWrap.innerHTML = wrapExploreTable(["Table", "Records", "Fields", "Unused", "Unstored Calc", "Always-Eval", "Deep Audit"], tableRowsHtml(rows, snapshotId));
   } else if (exploreActiveTab === "fields") {
     const rows = exploreData.fields.map((f, i) => ({ ...f, _i: i }));
     if (!rows.length) { listWrap.innerHTML = emptyExploreCard("This snapshot has no fields."); return; }
@@ -2807,7 +3191,7 @@ function renderExploreGlobalSearch(query) {
 
   const tableMatches = exploreData.tables.filter(t => t.table_name.toLowerCase().includes(query));
   if (tableMatches.length) sections.push(exploreSearchSection("Tables", tableMatches,
-    ["Table", "Records", "Fields", "Unused", "Unstored Calc", "Always-Eval"],
+    ["Table", "Records", "Fields", "Unused", "Unstored Calc", "Always-Eval", "Deep Audit"],
     rows => tableRowsHtml(rows, snapshotId)));
 
   const fieldMatches = exploreData.fields
@@ -2857,6 +3241,7 @@ function tableRowsHtml(rows, snapshotId) {
       <td>${t.unused_field_count || "—"}</td>
       <td>${t.unstored_calc_count || "—"}</td>
       <td>${t.always_evaluate_count || "—"}</td>
+      <td><a href="#" class="deep-audit-link" onclick="event.stopPropagation(); openExploreTable(${snapshotId}, '${escapeAttr(t.table_name)}'); return false;">deep audit</a></td>
     </tr>`).join("");
 }
 
@@ -2919,47 +3304,274 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/'/g, "\\'");
 }
 
-// --- Tables: reuses the existing table-audit detail endpoint/shape ---
+// --- Tables: reuses the existing table-audit detail endpoint/shape.
+// "deep audit" takes over the whole Explore tab as its own page (picker,
+// search, subtabs, and list all hidden) instead of expanding inline --
+// closeDeepAuditView() below is what brings the browse UI back. ---
+let currentTableAuditDetail = null;
+let currentTableAuditSnapshotId = null;
+
+const EXPLORE_BROWSE_ELEMENT_IDS = [
+  "explore-intro-card", "explore-search-card", "explore-stats-wrap",
+  "explore-subtabs-card", "explore-list-wrap", "explore-detail-wrap",
+];
+
 async function openExploreTable(snapshotId, tableName) {
-  const detailEl = document.getElementById("explore-detail-wrap");
-  detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ${escapeHtml(tableName)}...</div></div>`;
+  const viewEl = document.getElementById("explore-deep-audit-view");
+  EXPLORE_BROWSE_ELEMENT_IDS.forEach(id => document.getElementById(id).style.display = "none");
+  viewEl.style.display = "block";
+  viewEl.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ${escapeHtml(tableName)}...</div></div>`;
+  window.scrollTo({ top: 0, behavior: "smooth" });
   try {
     const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/table-audit/${encodeURIComponent(tableName)}`);
     const detail = await res.json();
     if (!res.ok) throw new Error(detail.error || "Could not load table detail.");
-
-    const fieldsRows = detail.fields.map(f => {
-      const flags = [];
-      if (f.is_calculation && f.storage_index === "None") flags.push(`<span class="flag-badge flag-warn">Unstored</span>`);
-      if (f.always_evaluate) flags.push(`<span class="flag-badge flag-warn">Always-eval</span>`);
-      if (f.is_unused) flags.push(`<span class="flag-badge">Unused</span>`);
-      if (f.has_validation) flags.push(`<span class="flag-badge flag-ok">Validated</span>`);
-      if (f.is_global) flags.push(`<span class="flag-badge">Global</span>`);
-      return `<tr><td><strong>${escapeHtml(f.name)}</strong></td><td>${escapeHtml(f.data_type || "—")}</td><td>${f.is_calculation ? "Calculation" : escapeHtml(f.field_type || "Normal")}</td><td>${flags.join(" ") || "—"}</td></tr>`;
-    }).join("");
-
-    const relsHtml = detail.relationships.length
-      ? detail.relationships.map(r => `<div class="rel-row"><div class="rel-other">${escapeHtml(r.other_table)}</div><div class="rel-pred">${r.predicates.map(p => `${escapeHtml(p.left_field?.name || "?")} ${escapeHtml(p.type || "=")} ${escapeHtml(p.right_field?.name || "?")}`).join(", ")}</div></div>`).join("")
-      : `<div class="snapshot-empty">No relationships involve this table.</div>`;
-    const layoutsHtml = detail.layouts.length
-      ? detail.layouts.map(l => `<div class="layout-row">${escapeHtml(l.layout_name)} <span style="color:var(--text-muted); font-size:12px;">— ${l.fields_used.length} field${l.fields_used.length === 1 ? "" : "s"} used</span></div>`).join("")
-      : `<div class="snapshot-empty">No layouts place a field from this table.</div>`;
-    const scriptsHtml = detail.scripts.length
-      ? detail.scripts.map(s => `<div class="script-row">${escapeHtml(s.script_name)} <span style="color:var(--text-muted); font-size:12px;">— touches ${s.fields_touched.length} field${s.fields_touched.length === 1 ? "" : "s"}</span></div>`).join("")
-      : `<div class="snapshot-empty">No script step directly references a field from this table.</div>`;
-
-    detailEl.innerHTML = `<div class="card">
-      <div class="table-detail-title"><p class="card-label" style="margin:0;">${escapeHtml(detail.table_name)} — ${detail.record_count.toLocaleString()} records</p>
-      <button class="secondary" onclick="document.getElementById('explore-detail-wrap').innerHTML=''">Close</button></div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Fields (${detail.fields.length})</div><table><thead><tr><th>Name</th><th>Type</th><th>Kind</th><th>Flags</th></tr></thead><tbody>${fieldsRows}</tbody></table></div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Related Tables (${detail.relationships.length})</div>${relsHtml}</div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Layouts Using This Table (${detail.layouts.length})</div>${layoutsHtml}</div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Scripts Touching This Table (${detail.scripts.length})</div>${scriptsHtml}</div>
-    </div>`;
-    detailEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    currentTableAuditDetail = detail;
+    currentTableAuditSnapshotId = snapshotId;
+    renderTableDeepAuditPage(detail, snapshotId);
   } catch (err) {
-    detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load table detail: ${escapeHtml(err.message)}</div></div>`;
+    viewEl.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load table detail: ${escapeHtml(err.message)}</div></div>`;
   }
+}
+
+function closeTableDeepAudit() {
+  document.getElementById("explore-deep-audit-view").style.display = "none";
+  document.getElementById("explore-deep-audit-view").innerHTML = "";
+  document.getElementById("explore-intro-card").style.display = "block";
+  document.getElementById("explore-search-card").style.display = exploreData ? "block" : "none";
+  document.getElementById("explore-subtabs-card").style.display = exploreData ? "block" : "none";
+  if (exploreData) renderExploreStats(exploreData.stats);
+  renderExploreList();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function tableAuditStatCard(label, value, isWarn) {
+  return `<div class="deep-audit-stat-card">
+    <div class="deep-audit-stat-value ${isWarn ? "warn" : ""}">${value}</div>
+    <div class="deep-audit-stat-label">${label}</div>
+  </div>`;
+}
+
+function renderTableDeepAuditPage(detail, snapshotId) {
+  const viewEl = document.getElementById("explore-deep-audit-view");
+  const fields = detail.fields;
+  const unstoredCount = fields.filter(f => f.is_calculation && f.storage_index === "None").length;
+  const alwaysEvalCount = fields.filter(f => f.always_evaluate).length;
+  const unusedCount = fields.filter(f => f.is_unused).length;
+  const validatedCount = fields.filter(f => f.has_validation).length;
+  const globalCount = fields.filter(f => f.is_global).length;
+  const dynamicAccess = detail.dynamic_access_fields || [];
+  const likelyTypos = detail.likely_typos || [];
+  const otherAutoEnter = detail.other_auto_enter_calcs || [];
+
+  const clean = alwaysEvalCount === 0 && dynamicAccess.length === 0;
+  const bannerHtml = clean
+    ? `<div class="deep-audit-banner ok">No alwaysEvaluate or dynamic access issues — see table summary below</div>`
+    : `<div class="deep-audit-banner warn">${alwaysEvalCount} always-evaluate field${alwaysEvalCount === 1 ? "" : "s"} and ${dynamicAccess.length} dynamic-access field${dynamicAccess.length === 1 ? "" : "s"} found — review before making changes</div>`;
+
+  const statCardsHtml = [
+    tableAuditStatCard("Total Fields", fields.length),
+    tableAuditStatCard("Records", detail.record_count.toLocaleString()),
+    tableAuditStatCard("AlwaysEval AE", alwaysEvalCount, alwaysEvalCount > 0),
+    tableAuditStatCard("Auto-Enter Total", detail.auto_enter_total ?? 0),
+    tableAuditStatCard("Calc Fields", detail.calc_field_count ?? 0),
+    tableAuditStatCard("Unstored Calcs", unstoredCount, unstoredCount > 0),
+    tableAuditStatCard("Dynamic Access", dynamicAccess.length, dynamicAccess.length > 0),
+    tableAuditStatCard("Globals", globalCount),
+    tableAuditStatCard("Likely Typos", likelyTypos.length, likelyTypos.length > 0),
+  ].join("");
+
+  const fieldsRows = fields.map(f => {
+    const flags = [];
+    if (f.is_calculation && f.storage_index === "None") flags.push(`<span class="flag-badge flag-warn">Unstored</span>`);
+    if (f.always_evaluate) flags.push(`<span class="flag-badge flag-warn">Always-eval</span>`);
+    if (f.is_unused) flags.push(`<span class="flag-badge">Unused</span>`);
+    if (f.has_validation) flags.push(`<span class="flag-badge flag-ok">Validated</span>`);
+    if (f.is_global) flags.push(`<span class="flag-badge">Global</span>`);
+    return `<tr><td><strong>${escapeHtml(f.name)}</strong></td><td>${escapeHtml(f.data_type || "—")}</td><td>${f.is_calculation ? "Calculation" : escapeHtml(f.field_type || "Normal")}</td><td>${flags.join(" ") || "—"}</td></tr>`;
+  }).join("");
+
+  const otherAutoEnterHtml = otherAutoEnter.length
+    ? `<table><thead><tr><th>Field</th><th>Type</th><th>Auto-Enter Kind</th><th>Calc</th></tr></thead><tbody>${otherAutoEnter.map(f => `<tr><td><strong>${escapeHtml(f.name)}</strong></td><td>${escapeHtml(f.data_type || "—")}</td><td>Calculated</td><td>${escapeHtml(f.calculation_text || "—")}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="snapshot-empty">No non-always-evaluate auto-enter calcs on this table.</div>`;
+
+  const dynamicAccessHtml = dynamicAccess.length
+    ? dynamicAccess.map(d => `<div class="rel-row"><strong>${escapeHtml(d.name)}</strong> — uses ${escapeHtml(d.function)}()</div>`).join("")
+    : `<div class="snapshot-empty">No fields reach other data through ExecuteSQL, GetField, or Evaluate.</div>`;
+
+  const likelyTyposHtml = likelyTypos.length
+    ? likelyTypos.map(t => `<div class="rel-row">${escapeHtml(t.field_a)} &harr; ${escapeHtml(t.field_b)} <span style="color:var(--text-muted); font-size:12px;">— edit distance ${t.distance}</span></div>`).join("")
+    : `<div class="snapshot-empty">No suspiciously similar field name pairs found.</div>`;
+
+  const relsHtml = detail.relationships.length
+    ? detail.relationships.map(r => `<div class="rel-row"><div class="rel-other">${escapeHtml(r.other_table)}</div><div class="rel-pred">${r.predicates.map(p => `${escapeHtml(p.left_field?.name || "?")} ${escapeHtml(p.type || "=")} ${escapeHtml(p.right_field?.name || "?")}`).join(", ")}</div></div>`).join("")
+    : `<div class="snapshot-empty">No relationships involve this table.</div>`;
+  const layoutsHtml = detail.layouts.length
+    ? detail.layouts.map(l => `<div class="layout-row">${escapeHtml(l.layout_name)} <span style="color:var(--text-muted); font-size:12px;">— ${l.fields_used.length} field${l.fields_used.length === 1 ? "" : "s"} used</span></div>`).join("")
+    : `<div class="snapshot-empty">No layouts place a field from this table.</div>`;
+  const scriptsHtml = detail.scripts.length
+    ? detail.scripts.map(s => `<div class="script-row">${escapeHtml(s.script_name)} <span style="color:var(--text-muted); font-size:12px;">— touches ${s.fields_touched.length} field${s.fields_touched.length === 1 ? "" : "s"}</span></div>`).join("")
+    : `<div class="snapshot-empty">No script step directly references a field from this table.</div>`;
+
+  const snapshotLabel = exploreData?.snapshot ? `${escapeHtml(exploreData.snapshot.client_name)} &rsaquo; ${escapeHtml(exploreData.snapshot.filename)}` : "";
+
+  viewEl.innerHTML = `
+    <div class="deep-audit-breadcrumb">
+      <a href="#" onclick="closeTableDeepAudit(); return false;">Explore</a> &rsaquo;
+      ${snapshotLabel ? snapshotLabel + " &rsaquo; " : ""}${escapeHtml(detail.table_name)}
+    </div>
+    <div class="deep-audit-header-row">
+      <div>
+        <p class="deep-audit-title">${escapeHtml(detail.table_name)} — Deep Audit</p>
+        <p class="deep-audit-subtitle">Table deep audit &middot; DDR snapshot</p>
+      </div>
+      <div class="deep-audit-toolbar">
+        <button onclick="downloadTableAuditDocx(${snapshotId}, '${escapeAttr(detail.table_name)}')">Download DOCX</button>
+        <button class="secondary" onclick="downloadTableAuditMarkdown()">Download Markdown</button>
+        <button class="secondary" onclick="closeTableDeepAudit()">Back to Table</button>
+      </div>
+    </div>
+    ${bannerHtml}
+    <div class="deep-audit-stats-grid">${statCardsHtml}</div>
+
+    <div class="card"><div class="table-detail-section-title">Fields (${fields.length})</div><table><thead><tr><th>Name</th><th>Type</th><th>Kind</th><th>Flags</th></tr></thead><tbody>${fieldsRows}</tbody></table></div>
+
+    <div class="card">
+      <div class="table-detail-section-title">Other Auto-Enter Calcs (${otherAutoEnter.length})</div>
+      <p class="deep-audit-note">Fields with auto-enter calculations that fire on record creation or when the field is empty, but do <strong>not</strong> re-evaluate on every commit.</p>
+      ${otherAutoEnterHtml}
+    </div>
+
+    <div class="card"><div class="table-detail-section-title">Dynamic Access (${dynamicAccess.length})</div>${dynamicAccessHtml}</div>
+    <div class="card"><div class="table-detail-section-title">Likely Typos (${likelyTypos.length})</div>${likelyTyposHtml}</div>
+    <div class="card"><div class="table-detail-section-title">Related Tables (${detail.relationships.length})</div>${relsHtml}</div>
+    <div class="card"><div class="table-detail-section-title">Layouts Using This Table (${detail.layouts.length})</div>${layoutsHtml}</div>
+    <div class="card"><div class="table-detail-section-title">Scripts Touching This Table (${detail.scripts.length})</div>${scriptsHtml}</div>
+
+    <div class="card">
+      <div class="table-detail-section-title">Verification Before Deploy</div>
+      <ul style="margin:8px 0 0; padding-left:20px; color:var(--text-muted); font-size:13px; line-height:1.6;">
+        <li>Before deleting any field, verify it is not referenced by external systems (API clients, data exports, webhook payloads, sync jobs). Static analysis cannot see consumers that live outside the DDR.</li>
+        <li>For any field with dynamic access (ExecuteSQL, GetField, Evaluate), the list above is a best-effort extraction of the compile-time literal cases. Walk each possible runtime argument and confirm the full target set before changing the field.</li>
+        <li>Always verify output against a representative sample of historical records and re-run the downstream exports and reports that read these fields — the before/after diff must be zero before deploying the change.</li>
+      </ul>
+    </div>
+  `;
+}
+
+async function downloadTableAuditDocx(snapshotId, tableName) {
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/table-audit/${encodeURIComponent(tableName)}/export-docx`);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${tableName}_deep_audit.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("Could not generate the DOCX file: " + err.message);
+  }
+}
+
+// Markdown export is built entirely client-side (no server round trip
+// needed, unlike DOCX) from the same detail object already on screen.
+function downloadTableAuditMarkdown() {
+  const detail = currentTableAuditDetail;
+  if (!detail) return;
+
+  const unstoredCount = detail.fields.filter(f => f.is_calculation && f.storage_index === "None").length;
+  const alwaysEvalCount = detail.fields.filter(f => f.always_evaluate).length;
+  const unusedCount = detail.fields.filter(f => f.is_unused).length;
+  const validatedCount = detail.fields.filter(f => f.has_validation).length;
+  const globalCount = detail.fields.filter(f => f.is_global).length;
+  const dynamicAccess = detail.dynamic_access_fields || [];
+  const likelyTypos = detail.likely_typos || [];
+  const otherAutoEnter = detail.other_auto_enter_calcs || [];
+
+  let md = `# ${detail.table_name} — Deep Audit\n\n`;
+  md += `Table deep audit · DDR snapshot\n\n`;
+  md += `Generated: ${new Date().toISOString()}\n\n`;
+  md += (alwaysEvalCount === 0 && dynamicAccess.length === 0)
+    ? `> No alwaysEvaluate or dynamic access issues — see table summary below.\n\n`
+    : `> ${alwaysEvalCount} always-evaluate field(s) and ${dynamicAccess.length} dynamic-access field(s) found — review before making changes.\n\n`;
+
+  md += `## Summary\n\n`;
+  md += `| Total Fields | Records | AlwaysEval AE | Auto-Enter Total | Calc Fields | Unstored Calcs | Dynamic Access | Globals | Likely Typos |\n`;
+  md += `|---|---|---|---|---|---|---|---|---|\n`;
+  md += `| ${detail.fields.length} | ${detail.record_count} | ${alwaysEvalCount} | ${detail.auto_enter_total ?? 0} | ${detail.calc_field_count ?? 0} | ${unstoredCount} | ${dynamicAccess.length} | ${globalCount} | ${likelyTypos.length} |\n\n`;
+
+  md += `## Fields (${detail.fields.length})\n\n`;
+  md += `| Name | Type | Kind | Flags |\n|---|---|---|---|\n`;
+  detail.fields.forEach(f => {
+    const flags = [];
+    if (f.is_calculation && f.storage_index === "None") flags.push("Unstored");
+    if (f.always_evaluate) flags.push("Always-eval");
+    if (f.is_unused) flags.push("Unused");
+    if (f.has_validation) flags.push("Validated");
+    if (f.is_global) flags.push("Global");
+    md += `| ${f.name || ""} | ${f.data_type || ""} | ${f.is_calculation ? "Calculation" : (f.field_type || "Normal")} | ${flags.join(", ") || "—"} |\n`;
+  });
+
+  md += `\n## Other Auto-Enter Calcs (${otherAutoEnter.length})\n\n`;
+  if (otherAutoEnter.length) {
+    md += `| Field | Type | Auto-Enter Kind | Calc |\n|---|---|---|---|\n`;
+    otherAutoEnter.forEach(f => { md += `| ${f.name || ""} | ${f.data_type || ""} | Calculated | ${(f.calculation_text || "").replace(/\|/g, "\\|")} |\n`; });
+  } else {
+    md += `No non-always-evaluate auto-enter calcs on this table.\n`;
+  }
+
+  md += `\n## Dynamic Access (${dynamicAccess.length})\n\n`;
+  if (dynamicAccess.length) {
+    dynamicAccess.forEach(d => { md += `- **${d.name}** — uses ${d.function}()\n`; });
+  } else {
+    md += `No fields reach other data through ExecuteSQL, GetField, or Evaluate.\n`;
+  }
+
+  md += `\n## Likely Typos (${likelyTypos.length})\n\n`;
+  if (likelyTypos.length) {
+    likelyTypos.forEach(t => { md += `- ${t.field_a} ↔ ${t.field_b} — edit distance ${t.distance}\n`; });
+  } else {
+    md += `No suspiciously similar field name pairs found.\n`;
+  }
+
+  md += `\n## Related Tables (${detail.relationships.length})\n\n`;
+  if (detail.relationships.length) {
+    detail.relationships.forEach(r => {
+      const preds = r.predicates.map(p => `${p.left_field?.name || "?"} ${p.type || "="} ${p.right_field?.name || "?"}`).join(", ");
+      md += `- **${r.other_table}** — ${preds}\n`;
+    });
+  } else {
+    md += `No relationships involve this table.\n`;
+  }
+
+  md += `\n## Layouts Using This Table (${detail.layouts.length})\n\n`;
+  if (detail.layouts.length) {
+    detail.layouts.forEach(l => { md += `- **${l.layout_name}** — ${l.fields_used.length} field(s) used\n`; });
+  } else {
+    md += `No layouts place a field from this table.\n`;
+  }
+
+  md += `\n## Scripts Touching This Table (${detail.scripts.length})\n\n`;
+  if (detail.scripts.length) {
+    detail.scripts.forEach(s => { md += `- **${s.script_name}** — touches ${s.fields_touched.length} field(s)\n`; });
+  } else {
+    md += `No script step directly references a field from this table.\n`;
+  }
+
+  md += `\n## Verification Before Deploy\n\n`;
+  md += `- Before deleting any field, verify it is not referenced by external systems (API clients, data exports, webhook payloads, sync jobs). Static analysis cannot see consumers that live outside the DDR.\n`;
+  md += `- For any field with dynamic access (ExecuteSQL, GetField, Evaluate), the list above is a best-effort extraction of the compile-time literal cases. Walk each possible runtime argument and confirm the full target set before changing the field.\n`;
+  md += `- Always verify output against a representative sample of historical records and re-run the downstream exports and reports that read these fields — the before/after diff must be zero before deploying the change.\n`;
+
+  const blob = new Blob([md], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${detail.table_name}_deep_audit.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // --- Scripts: reuses the existing script-audit detail endpoint/shape ---
@@ -3286,7 +3898,7 @@ async function renameSolutionPrompt(solutionId, currentName, clientId, clientNam
     if (!res.ok) { alert(data.error || "Could not rename solution."); return; }
     expandedClientId = null;
     toggleClientDetail(clientId, clientName);
-    refreshSnapshots();
+    refreshAllSnapshotDependentLists();
   } catch (err) {
     alert("Could not rename solution: " + err.message);
   }
@@ -3299,7 +3911,7 @@ async function deleteSolutionConfirm(solutionId, solutionName, clientId, clientN
     if (!res.ok) { const data = await res.json(); alert(data.error || "Could not delete solution."); return; }
     expandedClientId = null;
     toggleClientDetail(clientId, clientName);
-    refreshSnapshots();
+    refreshAllSnapshotDependentLists();
   } catch (err) {
     alert("Could not delete solution: " + err.message);
   }
@@ -3316,11 +3928,8 @@ async function renameClientPrompt(clientId, currentName) {
     });
     const data = await res.json();
     if (!res.ok) { alert(data.error || "Could not rename client."); return; }
-    loadDashboard();
     loadClients();
-    refreshSnapshots();
-    loadScriptAuditSnapshotOptions();
-    loadTimeline();
+    refreshAllSnapshotDependentLists();
   } catch (err) {
     alert("Could not rename client: " + err.message);
   }
@@ -3335,11 +3944,8 @@ async function deleteClientConfirm(clientId, clientName) {
       expandedClientId = null;
       document.getElementById("dashboard-client-detail").innerHTML = "";
     }
-    loadDashboard();
     loadClients();
-    refreshSnapshots();
-    loadScriptAuditSnapshotOptions();
-    loadTimeline();
+    refreshAllSnapshotDependentLists();
   } catch (err) {
     alert("Could not delete client: " + err.message);
   }
@@ -3352,9 +3958,7 @@ async function deleteSnapshotConfirm(snapshotId, clientId, clientName) {
     if (!res.ok) { const data = await res.json(); alert(data.error || "Could not delete snapshot."); return; }
     expandedClientId = null; // force a clean re-expand with fresh data
     toggleClientDetail(clientId, clientName);
-    refreshSnapshots();
-    loadScriptAuditSnapshotOptions();
-    loadTimeline();
+    refreshAllSnapshotDependentLists();
   } catch (err) {
     alert("Could not delete snapshot: " + err.message);
   }

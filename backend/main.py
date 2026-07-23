@@ -63,12 +63,15 @@ from sql_reviewer import review_sql_text, get_sql_rewrite
 from ai_client import set_runtime_config, get_runtime_status, test_connection
 from unused_analysis import run_unused_rules
 from call_chain import build_call_chain
-from docx_report import build_docx_report
+from docx_report import build_docx_report, build_table_audit_docx
 from compare_snapshots import compare_snapshots
 from table_audit import build_table_summary, build_table_detail
 from script_audit import build_script_summary, build_script_detail
 from sql_audit import build_sql_audit
 from explore import build_explore
+from variable_audit import build_variable_audit, build_variable_detail
+from erd_audit import build_erd_summary
+from health_audit import build_health_summary
 from database import (
     init_db,
     get_or_create_client,
@@ -85,7 +88,6 @@ from database import (
     list_solutions,
     rename_solution,
     delete_solution,
-    count_users,
     create_user,
     verify_user,
     create_session,
@@ -111,14 +113,19 @@ SEVERITY_ORDER = {"Critical": 0, "Warning": 1, "Info": 2}
 # the frontend's existing 25+ fetch() calls need to change at all --
 # same-origin fetch() already sends cookies automatically.
 #
+# GROUP B FEATURE: Master / Sub-Account Hierarchy -- there is exactly
+# one master account, created automatically the first time the app
+# starts (see database.seed_master_account()) rather than by whoever
+# happens to visit first. Because of that, the old "create the very
+# first account" self-registration flow is retired -- the users table
+# is never empty by the time anyone reaches the login screen, so that
+# code path is simply never reached anymore.
+#
 # Only these paths work without being logged in:
 #   "/"                    the frontend shell itself (login screen is
 #                           rendered client-side, inside that same page)
 #   /api/auth/status        so the page can ask "am I logged in?" first
 #   /api/auth/login         to log in
-#   /api/auth/bootstrap     to create the very first account (only
-#                           works while zero users exist -- see the
-#                           endpoint below)
 #   /api/auth/logout        always safe to call, logged in or not
 # ---------------------------------------------------------------------------
 
@@ -126,7 +133,6 @@ PUBLIC_PATHS = {
     "/",
     "/api/auth/status",
     "/api/auth/login",
-    "/api/auth/bootstrap",
     "/api/auth/logout",
 }
 
@@ -229,7 +235,7 @@ class UserCreateRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    old_password: str
+    current_password: str
     new_password: str
 
 
@@ -247,44 +253,22 @@ SESSION_COOKIE = "session_token"
 @app.get("/api/auth/status")
 async def auth_status(request: Request):
     """Public. The frontend calls this first on every load to decide what
-    to show: the app itself, a normal login form, or -- only while zero
-    accounts exist -- the one-time "create the first account" form."""
+    to show: the app itself, or a normal login form."""
     user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
     return {
-        "has_users": count_users() > 0,
         "logged_in": user is not None,
         "username": user["username"] if user else None,
+        "role": user["role"] if user else None,
     }
-
-
-@app.post("/api/auth/bootstrap")
-async def auth_bootstrap(body: LoginRequest, response: Response):
-    """Public, but only actually works once: creates the very first user
-    account. Refuses once any account already exists, so this can't be
-    used to keep creating unauthenticated accounts later -- from then on,
-    new users are added via POST /api/auth/users by someone already
-    logged in."""
-    if count_users() > 0:
-        return JSONResponse(
-            {"detail": "An account already exists. Please log in instead."},
-            status_code=400,
-        )
-    try:
-        user = create_user(body.username, body.password)
-    except ValueError as e:
-        return JSONResponse({"detail": str(e)}, status_code=400)
-    token = create_session(user["id"])
-    response.set_cookie(SESSION_COOKIE, token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30)
-    return user
 
 
 @app.post("/api/auth/login")
 async def auth_login(body: LoginRequest, response: Response):
-    """Public. Wrong email/username and wrong password return the exact same
-    message on purpose -- doesn't confirm which emails/usernames exist."""
+    """Public. Wrong username and wrong password return the exact same
+    message on purpose -- doesn't confirm which usernames exist."""
     user = verify_user(body.username, body.password)
     if not user:
-        return JSONResponse({"detail": "Incorrect email or password."}, status_code=401)
+        return JSONResponse({"detail": "Incorrect username or password."}, status_code=401)
     token = create_session(user["id"])
     response.set_cookie(SESSION_COOKIE, token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30)
     return user
@@ -301,27 +285,46 @@ async def auth_logout(request: Request, response: Response):
     return {"ok": True}
 
 
+def _require_master(request: Request) -> JSONResponse | None:
+    """Shared guard for the user-management endpoints below. Returns a
+    403 JSONResponse if the logged-in caller isn't the master account,
+    or None if it's fine to proceed."""
+    if request.state.user.get("role") != "master":
+        return JSONResponse({"detail": "Only the master account can manage users."}, status_code=403)
+    return None
+
+
 @app.get("/api/auth/users")
-async def auth_list_users():
-    """Requires login (not in PUBLIC_PATHS). No self/other distinction --
-    any logged-in person can see and manage the full user list."""
+async def auth_list_users(request: Request):
+    """Requires login. Only the master account can see the user list --
+    sub-accounts manage nothing here."""
+    denied = _require_master(request)
+    if denied:
+        return denied
     return list_users()
 
 
 @app.post("/api/auth/users")
-async def auth_create_user(body: UserCreateRequest):
-    """Requires login. This is how teammates get added after the very
-    first account exists -- self-registration (bootstrap) only works once."""
+async def auth_create_user(body: UserCreateRequest, request: Request):
+    """Requires login, master only. Every account created this way is a
+    sub-account -- this app never creates a second master."""
+    denied = _require_master(request)
+    if denied:
+        return denied
     try:
-        return create_user(body.username, body.password)
+        return create_user(body.username, body.password, role="sub", created_by_id=request.state.user["id"])
     except ValueError as e:
         return JSONResponse({"detail": str(e)}, status_code=400)
 
 
 @app.delete("/api/auth/users/{user_id}")
-async def auth_delete_user(user_id: int):
-    """Requires login. Refuses to remove the last remaining account so
-    the tool can never lock everyone out."""
+async def auth_delete_user(user_id: int, request: Request):
+    """Requires login, master only. Refuses to remove the last remaining
+    account or the master account itself, so the tool can never lock
+    everyone out."""
+    denied = _require_master(request)
+    if denied:
+        return denied
     try:
         ok = delete_user(user_id)
     except ValueError as e:
@@ -333,20 +336,11 @@ async def auth_delete_user(user_id: int):
 
 @app.post("/api/auth/change-password")
 async def auth_change_password(body: ChangePasswordRequest, request: Request):
-    """Requires login. Closes the one gap in the minimal Users/Login
-    design (see database.change_password's docstring) -- a logged-in
-    account can now change its OWN password, given its current one.
-
-    This does NOT cover a locked-out sole admin who's forgotten their
-    only password (no email/SMTP is configured, so there's no
-    "forgot password" recovery link) -- that scenario still has no
-    fix short of direct database access or a teammate's account.
-    """
-    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
-    if not user:
-        return JSONResponse({"detail": "Not authenticated. Please log in."}, status_code=401)
+    """Requires login. Any logged-in account -- master or sub -- can
+    change its own password this way, given the current one. This is
+    how the master rotates the fixed seeded starting password."""
     try:
-        change_password(user["id"], body.old_password, body.new_password)
+        change_password(request.state.user["id"], body.current_password, body.new_password)
     except ValueError as e:
         return JSONResponse({"detail": str(e)}, status_code=400)
     return {"ok": True}
@@ -419,33 +413,36 @@ async def analyze_ddr(
         findings = run_all_rules(data) + run_unused_rules(data) + build_call_chain(data)
         report = _build_report(findings)
 
-        # Force saving a snapshot for every upload.
-        # If client_name is not provided, default to "Direct Uploads".
-        actual_client_name = (client_name or "").strip()
-        if not actual_client_name:
-            actual_client_name = "Direct Uploads"
-
-        try:
-            client = get_or_create_client(actual_client_name)
-            solution_id = None
-            actual_solution_name = (solution_name or "").strip()
-            if actual_solution_name:
-                solution = get_or_create_solution(client.id, actual_solution_name)
-                solution_id = solution.id
-            snapshot = create_snapshot(
-                client_id=client.id,
-                filename=file.filename or "ddr.xml",
-                parsed_data=data,
-                report=report,
-                solution_id=solution_id,
-            )
-            report["snapshot"] = snapshot
-        except Exception as e:
-            # Saving the snapshot failing should never hide the
-            # analysis the user is waiting on -- report it back as
-            # a soft warning field instead of a 500.
-            traceback.print_exc()
-            report["snapshot_error"] = str(e)
+        # STEP 1 (roadmap): optionally persist this analysis as a
+        # snapshot -- get-or-create the client by name, then store the
+        # parsed DDR dict + the report as one row. The frontend decides
+        # whether to send save_snapshot=true (checkbox) and a
+        # client_name; if either is missing, behaviour is unchanged
+        # from before (analyze, show, don't save).
+        if save_snapshot and client_name and client_name.strip():
+            try:
+                client = get_or_create_client(client_name)
+                # STEP 1b (roadmap): solution is optional -- a client
+                # with only ever one solution can still just save under
+                # "client only", exactly like before this feature.
+                solution_id = None
+                if solution_name and solution_name.strip():
+                    solution = get_or_create_solution(client.id, solution_name)
+                    solution_id = solution.id
+                snapshot = create_snapshot(
+                    client_id=client.id,
+                    filename=file.filename or "ddr.xml",
+                    parsed_data=data,
+                    report=report,
+                    solution_id=solution_id,
+                )
+                report["snapshot"] = snapshot
+            except Exception as e:
+                # Saving the snapshot failing should never hide the
+                # analysis the user is waiting on -- report it back as
+                # a soft warning field instead of a 500.
+                traceback.print_exc()
+                report["snapshot_error"] = str(e)
 
         return JSONResponse(report)
 
@@ -733,6 +730,37 @@ async def get_table_audit_detail(snapshot_id: int, table_name: str):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.get("/api/snapshots/{snapshot_id}/table-audit/{table_name}/export-docx")
+async def export_table_audit_docx(snapshot_id: int, table_name: str):
+    """Deep Audit DOCX for one table -- the "Download DOCX" button next
+    to the "deep audit" link on the Explore Tables tab. Reuses the exact
+    same build_table_detail() the on-page detail panel already calls,
+    so the DOCX can never drift out of sync with what's shown on screen."""
+    snapshot = get_snapshot(snapshot_id)
+    if snapshot is None:
+        return JSONResponse({"error": "Snapshot not found."}, status_code=404)
+    try:
+        detail = build_table_detail(snapshot["parsed_data"], table_name)
+        if detail is None:
+            return JSONResponse({"error": f'Table "{table_name}" not found in this snapshot.'}, status_code=404)
+        source_label = f'{snapshot["client_name"]} - {snapshot["filename"]}'
+        buf = build_table_audit_docx(detail, source_label)
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in table_name)
+        return StreamingResponse(
+            buf,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document"
+            ),
+            headers={
+                "Content-Disposition": f'attachment; filename="{safe_name}_deep_audit.docx"'
+            },
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # ---------------------------------------------------------------------------
 # Explore: one page, one snapshot, tabs for Tables/Fields/Scripts/
 # Layouts/Relationships -- see explore.py for how each list is built.
@@ -746,6 +774,81 @@ async def get_explore(snapshot_id: int):
         return JSONResponse({"error": "Snapshot not found."}, status_code=404)
     try:
         payload = build_explore(snapshot["parsed_data"])
+        payload["snapshot"] = {k: snapshot[k] for k in ("id", "client_name", "filename", "created_at")}
+        return JSONResponse(payload)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# Variables: $$Global / $local variable tracking, read from saved DDR.
+# See variable_audit.py for how sets/gets are detected.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/snapshots/{snapshot_id}/variable-audit")
+async def get_variable_audit(snapshot_id: int):
+    snapshot = get_snapshot(snapshot_id)
+    if snapshot is None:
+        return JSONResponse({"error": "Snapshot not found."}, status_code=404)
+    try:
+        payload = build_variable_audit(snapshot["parsed_data"])
+        payload["snapshot"] = {k: snapshot[k] for k in ("id", "client_name", "filename", "created_at")}
+        return JSONResponse(payload)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/snapshots/{snapshot_id}/variable-audit/{var_name}")
+async def get_variable_audit_detail(snapshot_id: int, var_name: str):
+    snapshot = get_snapshot(snapshot_id)
+    if snapshot is None:
+        return JSONResponse({"error": "Snapshot not found."}, status_code=404)
+    try:
+        detail = build_variable_detail(snapshot["parsed_data"], var_name)
+        if detail is None:
+            return JSONResponse({"error": f'Variable "{var_name}" not found in this snapshot.'}, status_code=404)
+        return JSONResponse(detail)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# ERD: table relationship graph overview, read from saved DDR.
+# See erd_audit.py for how clusters/orphan tables are computed.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/snapshots/{snapshot_id}/erd")
+async def get_erd_summary(snapshot_id: int):
+    snapshot = get_snapshot(snapshot_id)
+    if snapshot is None:
+        return JSONResponse({"error": "Snapshot not found."}, status_code=404)
+    try:
+        payload = build_erd_summary(snapshot["parsed_data"])
+        payload["snapshot"] = {k: snapshot[k] for k in ("id", "client_name", "filename", "created_at")}
+        return JSONResponse(payload)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# Health: one overall score, combining saved finding counts with
+# Explore/Variables/ERD stats. See health_audit.py.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/snapshots/{snapshot_id}/health")
+async def get_health_summary(snapshot_id: int):
+    snapshot = get_snapshot(snapshot_id)
+    if snapshot is None:
+        return JSONResponse({"error": "Snapshot not found."}, status_code=404)
+    try:
+        payload = build_health_summary(snapshot["parsed_data"], snapshot.get("summary", {}))
         payload["snapshot"] = {k: snapshot[k] for k in ("id", "client_name", "filename", "created_at")}
         return JSONResponse(payload)
     except Exception as e:

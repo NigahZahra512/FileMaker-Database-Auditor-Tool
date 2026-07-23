@@ -122,12 +122,13 @@ without Docker, not a replacement for it.
 
 ## 4. Using the tool
 
-**Signing in**: the very first time the tool runs (empty database), it
-asks you to create an account instead of logging in — that becomes the
-first user. From then on, everyone signs in with a username/password.
-Any signed-in user can add or remove teammates from the **Users**
-button in the header. There are no roles — every account can do
-everything.
+**Signing in**: a master account is created automatically the first
+time the tool ever runs (email `sohaibkhan2030@gmail.com`, password
+`qwerty123` — change this from the **Password** button in the header
+after your first sign-in). Only the master account can add or remove
+sub-accounts, from the **Users** button in the header (sub-accounts
+don't see that button at all). Any signed-in account — master or
+sub — can sign in, use the whole tool, and change its own password.
 
 **DDR Analysis**: upload a DDR `.xml` file (see section 1) and click
 **Run Analysis**. You get a colour-coded findings table (red =

@@ -24,6 +24,49 @@ thing here as it does on the main DDR Analysis / Unused Fields report.
 """
 
 from unused_analysis import _collect_field_references
+import re
+
+# Functions that let a calculation reach a field it doesn't reference
+# by name at author-time -- static analysis can only report the
+# compile-time literal cases (see the "Verification Before Deploy"
+# note the Deep Audit view surfaces alongside this).
+DYNAMIC_ACCESS_PATTERN = re.compile(r"\b(ExecuteSQL|GetField|GetFieldName|Evaluate)\s*\(", re.IGNORECASE)
+
+
+def _levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            curr[j] = min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + (ca != cb))
+        prev = curr
+    return prev[-1]
+
+
+def _find_likely_typos(field_names: list[str]) -> list[dict]:
+    """Pairs of field names on the same table that are suspiciously
+    close to each other (small edit distance, not an identical or
+    pure-case rename) -- a common sign of a copy-pasted field that
+    should have been renamed but wasn't."""
+    pairs = []
+    seen = set()
+    names = [n for n in field_names if n]
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a, b = names[i], names[j]
+            if a.lower() == b.lower():
+                continue
+            if max(len(a), len(b)) <= 3:
+                continue
+            dist = _levenshtein(a.lower(), b.lower())
+            if 0 < dist <= 2:
+                key = tuple(sorted((a, b)))
+                if key not in seen:
+                    seen.add(key)
+                    pairs.append({"field_a": a, "field_b": b, "distance": dist})
+    return pairs
 
 
 def build_table_summary(data: dict) -> list[dict]:
@@ -134,6 +177,39 @@ def build_table_detail(data: dict, table_name: str) -> dict | None:
                 "fields_touched": sorted(touched_fields),
             })
 
+    # Auto-Enter Calcs that don't re-evaluate on every commit -- the
+    # "Other Auto-Enter Calcs" section on the Deep Audit view. Distinct
+    # from unstored calc FIELDS: this covers any field (including plain
+    # Normal fields like a UUID primary key) that has an auto-enter
+    # calculation defined on it.
+    calc_field_count = sum(1 for f in table.get("fields", []) if (f.get("field_type") or "").lower() == "calculation")
+    auto_enter_fields = [f for f in table.get("fields", []) if f.get("is_calculation")]
+    other_auto_enter_calcs = [
+        {
+            "name": f.get("name"),
+            "data_type": f.get("data_type"),
+            "calculation_text": f.get("calculation_text"),
+        }
+        for f in auto_enter_fields if not f.get("always_evaluate")
+    ]
+
+    # Dynamic access: fields whose own calculation reaches other fields
+    # through ExecuteSQL / GetField / Evaluate instead of a literal
+    # reference -- these can't be safely renamed/removed by static
+    # analysis alone (see docstring at the top of this module).
+    dynamic_access_fields = []
+    for f in table.get("fields", []):
+        calc = f.get("calculation_text") or ""
+        match = DYNAMIC_ACCESS_PATTERN.search(calc)
+        if match:
+            dynamic_access_fields.append({
+                "name": f.get("name"),
+                "function": match.group(1),
+                "calculation_text": calc,
+            })
+
+    likely_typos = _find_likely_typos([f.get("name") for f in table.get("fields", [])])
+
     return {
         "table_name": table_name,
         "record_count": table.get("record_count", 0),
@@ -141,4 +217,9 @@ def build_table_detail(data: dict, table_name: str) -> dict | None:
         "relationships": relationships,
         "layouts": layouts,
         "scripts": scripts,
+        "calc_field_count": calc_field_count,
+        "auto_enter_total": len(auto_enter_fields),
+        "other_auto_enter_calcs": other_auto_enter_calcs,
+        "dynamic_access_fields": dynamic_access_fields,
+        "likely_typos": likely_typos,
     }

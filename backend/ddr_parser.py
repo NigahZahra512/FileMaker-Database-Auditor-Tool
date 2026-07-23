@@ -401,9 +401,7 @@ def parse_ddr(file_path: str) -> dict:
             # Only close a script definition on the matching top-level end
             # (current_step is None means we're not inside a nested ref).
             if current_script is not None:
-                script_name = (current_script.get("name") or "").strip()
-                if script_name and script_name != "-":
-                    result["scripts"].append(current_script)
+                result["scripts"].append(current_script)
             current_script = None
 
         # ---------------- Memory cleanup ----------------

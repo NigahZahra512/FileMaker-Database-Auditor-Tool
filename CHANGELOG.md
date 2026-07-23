@@ -617,96 +617,202 @@ update hui (users/sessions tables mention).
 
 ---
 
-## Session 2026-07-22 (cont'd, 5) — Live auth end-to-end test + Change Password
+## Abhi baaki (roadmap ke agle steps)
 
-**Live server test (pichli session ka baaki hissa):** is baar network
-access tha, is liye real FastAPI server chala kar poora flow verify
-kiya: `/api/auth/status` (zero users), `bootstrap` (pehla account),
-`status` (logged in), dobara `bootstrap` (refuse hua, sahi), protected
-endpoint bina cookie ke (401) aur cookie ke sath (200), teammate add
-karna, `logout`, teammate se `login`, galat password (generic 401,
-kisi username ka pata nahi chalta), aur **last-user-delete-guard**
-(pehla user delete hua theek se, doosra/aakhri user delete nahi hone
-diya) — **sab pass hua**.
-
-**Gap jo Sohaib ke Slack sawaal se mila:** unki 4 requirements mein se
-teen already the (apna login, admin multiple accounts add kar sake,
-har user ka apna username/email), lekin chauthi -- "admin apna
-password reset kar sake agar bhool jaye" -- missing thi. Fix kiya:
-
-- **`backend/database.py`** — naya `change_password(user_id,
-  old_password, new_password)`. Current password verify karta hai
-  pehle (jaise reference tool ke apne Profile > Change Password
-  screen jaisa), phir naya hash save karta hai. Naya password 6+
-  characters honi chahiye (same validation jo `create_user` mein hai).
-- **`backend/main.py`** — naya `POST /api/auth/change-password`
-  endpoint, session cookie se current user identify karta hai (body
-  mein username nahi bhejna parta -- koi doosre ka password change
-  nahi kar sakta).
-- **`frontend/index.html`** — Manage Users modal mein "Change your own
-  password" form add hua (current password + new password fields).
-
-**Zaroori limitation jo abhi bhi baaki hai:** ye sirf "logged in ho aur
-apna password change karna hai" wala case cover karta hai -- agar koi
-**akela admin apna password bhool jaye aur locked out ho jaye**, koi
-"forgot password" email/reset-link mechanism nahi hai (SMTP configure
-nahi hai). Us case mein sirf direct database access ya kisi doosre
-logged-in teammate ka account hi rasta hai. Agar Sohaib ke liye ye
-scenario matter karta hai, isay resolve karne ke liye ya to email
-server chahiye hoga ya koi alag out-of-band recovery mechanism.
-
-**Testing:** `py_compile` clean, frontend `<script>` block
-`node --check` clean, phir live server pe poora naya flow test kiya:
-galat old password (reject), sahi old password (success), purani
-password se login (ab fail), nayi password se login (pass), choti
-nayi password (validation reject), bina login ke change-password call
-(401) — **sab pass**.
+- **Live server end-to-end test** (is Users/Login session ka baaki
+  hissa): real FastAPI server chala kar poora bootstrap → login → add
+  teammate → logout → re-login → last-user-guard flow verify karna.
+- **Live Log Monitoring**: FileMaker Server logs live tail karna
+  (background service/websocket chahiye — sab se mushkil, isliye sab
+  se aakhir mein).
+- **Optional follow-up polish (low priority)**: Table Audit / Script
+  Audit / ExecuteSQL Audit tabs abhi bhi client-only filter use karte
+  hain (solution filter nahi) -- wo teeno tabs seedha ek specific
+  snapshot pick karte hain, isliye solution filter "nice to have" hai,
+  zaroori nahi. Agar chahiye to add ho sakta hai.
 
 ---
 
-## Abhi baaki (roadmap ke agle steps)
+## Session 2026-07-22 (cont'd, 5) — Explore page (Group A: unified Tables/Fields/Scripts/Layouts/Relationships) + Global Search
 
-### Explore page ko poora karna (Sohaib/FM Changelog se, size ke hisaab se chhoti-se-badi order mein)
+**Wajah:** Ek colleague ke "FM Changelog" reference tool ne ek unified
+"Explore" page dikhaya tha — ek hi page pe Tables/Fields/Scripts/
+Layouts/Relationships tabs, click karke drill-down detail. Isko is
+tool mein add karna tha.
 
-1. **Field Usage tab** — field pe click karo to pata chale kin layouts
-   aur scripts mein use ho raha hai (reverse lookup, abhi table-level
-   pe hai, field-level standalone nahi)
-2. **Unused tab** — sirf unused fields + unused scripts ki dedicated
-   list, ek jagah (abhi sirf counts/flags dikhte hain, poori list
-   nahi)
-3. **Patterns tab** — `detection_rules.py`'s findings ko Explore page
-   ke andar ek category ki tarah dikhana
-4. **Call Chain tab** — backend (`call_chain.py`) already ban chuka
-   hai, bas UI mein dedicated tab nahi hai abhi
-5. **$$Variables tab** — global variables ($$var) scripts mein kahan
-   set/use ho rahe hain
-6. **ERD (visual diagram)** — tables ke beech relationships ka
-   graphical diagram
-7. **AI button** — Explore page ke andar hi AI se sawal pooch sako
+- **`backend/explore.py`** (naya) — koi naya parsing/analysis logic
+  nahi likha; jo already tha usay flatten/reuse kiya:
+  - `build_fields_list()` — har table ke fields ko ek flat list mein
+    (is_unused flag `unused_analysis._collect_field_references()` se).
+  - `build_layouts_list()`, `build_relationships_list()` — layout/
+    relationship ka poora field/portal/predicate detail inline (taake
+    click karne pe dusra server round-trip na lagay).
+  - `build_explore_stats()` — summary strip ke counts (`call_chain.
+    _build_call_graph()` se script-calls count).
+  - `build_explore()` — sab combine karke ek hi response.
+- **`backend/main.py`** — naya `GET /api/snapshots/{id}/explore`
+  endpoint, jo upar wala combine karta hai. Table aur Script row detail
+  **existing** `/table-audit/{name}` aur `/script-audit/{name}`
+  endpoints hi reuse karte hain (koi duplicate detail-endpoint nahi
+  likha).
+- **`frontend/index.html`** — naya "Explore" tab:
+  - Client/snapshot picker (Table Audit tab jaisa hi pattern).
+  - Stats strip: Tables, Fields, Scripts, Layouts, Relationships,
+    Script Calls, Unused Fields, Unused Scripts, Always-Eval, Unstored
+    Calcs.
+  - 5 sub-tabs (pills, counts ke sath — "Tables (97)" jaisa).
+  - **Global search** (top search bar) — Tables/Fields/Scripts/
+    Layouts/Relationships **sab ek sath** search karta hai jab query
+    non-empty ho (grouped sections, har category max 15 results, "+N
+    more — narrow your search" note). Query empty ho to normal
+    per-tab browsing wapis aa jati hai.
+  - Row click: Table/Script → full existing detail endpoint se detail
+    khulta hai; Field/Layout/Relationship → inline expand (data
+    already loaded hai, extra fetch nahi lagta).
+  - Visual polish pass: full-width search apni alag card mein, stats
+    strip flat/borderless row (per-metric box ki jagah sirf thin
+    divider lines), reference screenshot se match karne ke liye.
 
-### Deep Audit / Per-Table page ko behtar banana
+**Bug fixes (isi session mein):**
+- Explore ka snapshot dropdown login ke baad reload nahi ho raha tha
+  (`reloadAppDataAfterLogin()` mein naya loader add karna bhool gaya
+  tha) — fix ho gaya.
+- Fields/Layouts/Relationships list ko search se filter karne ke baad
+  row click karne pe **galat item** ka detail khul jata tha (filtered-
+  array ka index, poore-array ke against use ho raha tha). Fix: har
+  row apna original index (`_i`) carry karta hai ab, filter se pehle.
 
-8. Table Audit stats ko richer banana — Auto-Enter Total, Dynamic
-   Access, Globals, Likely Typos jaise naye flags
-9. Har detail page (Table/Script) ke liye Download DOCX/Markdown
-   button
+---
 
-### Bara/naya feature (zyada kaam)
+## Session 2026-07-22 (cont'd, 6) — Master/Sub-Account Hierarchy + Change Password + Light/Dark Theme
 
-10. **Multi-tenant Dashboard + Servers + Live Logs** — clients/
-    solutions ka card view, server register karna, live log tail
-    karna
-11. **Solution-level page** — DDR/SAX snapshot history table, "Daily
-    Audit", "Live Connect", "Monitor" buttons
-12. **Releases & Test Packs** — snapshot ko "release" ki tarah tag
-    karna, test packs generate karna
+**Wajah:** Purana Users/Login system (Step 7) mein sab accounts barabar
+the — koi bhi account dusre accounts add/remove kar sakta tha, aur
+pehla visitor hi "first account" bana leta tha. User ne bataya ke sirf
+**ek master account** hona chahiye (fixed email/password se seed), jo
+hi sub-accounts create kar sake.
 
-### Baaki known gaps
+- **`backend/database.py`** update:
+  - `User` model mein naye columns: `role` ("master" ya "sub"),
+    `created_by_id`.
+  - **`seed_master_account()`** — app pehli dafa start hone par
+    (users table bilkul khali ho tab) automatically ek master account
+    ban jata hai: email `sohaibkhan2030@gmail.com`, password
+    `qwerty123`. Purana "jo pehle aaye wo master" wala bootstrap flow
+    hata diya.
+  - **`_migrate_user_columns()`** — safe migration jo **existing DB ko
+    delete kiye bina** naye columns add kar deti hai (SQLite
+    `PRAGMA table_info` se check karke `ALTER TABLE ... ADD COLUMN`),
+    aur agar koi purana account already tha (is feature se pehle
+    banaya hua), usay automatically master bana deti hai — taake
+    kisi ke paas zero master wala DB na bache.
+  - `create_user()` ab `role` + `created_by_id` accept karta hai.
+  - Naya `change_password(user_id, current_password, new_password)` —
+    current password verify karke naya set karta hai.
+  - `list_users()` role bhi return karta hai; `delete_user()` ab
+    **master account delete hone se refuse** karta hai (last-account
+    guard ke ilawa).
+- **`backend/main.py`** update:
+  - `/api/auth/bootstrap` retire kiya (PUBLIC_PATHS se bhi hata diya)
+    — ab kabhi zaroorat nahi padti, master hamesha seed ho chuka hota
+    hai.
+  - `/api/auth/status` ab `role` bhi return karta hai.
+  - `GET/POST /api/auth/users` aur `DELETE /api/auth/users/{id}` ab
+    **sirf master** kar sakta hai (naya `_require_master()` guard, 403
+    return karta hai warna).
+  - Naya `POST /api/auth/change-password` — koi bhi logged-in account
+    (master ya sub) apna khud ka password change kar sakta hai.
+- **`frontend/index.html`** update:
+  - Login form ab "Email" field dikhata hai; "create the first
+    account" (bootstrap) form poori tarah hata diya — login hamesha
+    seedha normal sign-in form hi hota hai ab.
+  - Header mein naye buttons: **theme toggle** (sun/moon icon,
+    light/dark) aur **Password** (change-password modal).
+  - "Users" header button ab **sirf master ko dikhta hai**
+    (`hideAuthOverlay()` mein role check se).
+  - Users modal: har row pe "Master"/"Sub-account" badge; master ki
+    apni row pe "Remove" button nahi dikhta.
+  - **Light/Dark theme**: poori stylesheet CSS variables pe based thi
+    already, isliye sirf ek `html[data-theme="light"]` override block
+    add kiya — koi component CSS badalna nahi para. `<head>` mein ek
+    chhota inline script (page paint se pehle) saved theme
+    `localStorage` se apply karta hai, taake reload pe flash na ho.
 
-- **Live Log Monitoring** (same as #10 upar) — sab se mushkil, isliye
-  sab se aakhir mein.
-- **Sole-admin forgot-password recovery** — is session mein flag hua
-  (upar dekho), koi fix nahi hai abhi.
-- **Optional low-priority polish**: Table Audit / Script Audit /
-  ExecuteSQL Audit tabs abhi client-only filter use karte hain
-  (solution filter nahi) -- nice-to-have, zaroori nahi.
+**Testing (is session mein):** `py_compile` dono backend files pe
+clean. Migration + seeding logic ek standalone script se **stdlib-only
+`sqlite3`** ke through verify kiya (SQLAlchemy is sandbox mein install
+nahi ho saka, network access nahi tha) — purani-schema wali table pe
+`ALTER TABLE ADD COLUMN` chalaya, purane account ko master banaya,
+named-placeholder (`:id`) syntax bhi confirm kiya ke stdlib sqlite3
+driver ke sath kaam karta hai (jo `exec_driver_sql()` internally use
+karta hai). Extracted dono `<script>` blocks `node --check` se clean.
+**Note:** pichli session ki tarah is session mein bhi live FastAPI
+server chala kar poora end-to-end flow (login as master → sub-account
+banana → us se login → password change → master delete refuse) test
+nahi ho saka (sandbox mein network/sqlalchemy nahi tha) — ye agli
+session mein baaki hai.
+
+---
+
+## Abhi baaki (roadmap ke agle steps, latest)
+
+- **Live server end-to-end test** (Explore + Master/Sub-Account dono
+  sessions ka baaki hissa): real FastAPI server chala kar poora flow
+  verify karna — login as seeded master → sub-account create → uss
+  se login → password change → master delete refuse → Explore
+  snapshot select → sab 5 tabs + global search + row detail.
+- **Explore page ke baaki sub-features**: Field Usage (reverse lookup —
+  ye field kin layouts/scripts mein use hota hai), dedicated Unused
+  tab, Patterns tab (detection_rules.py ke findings), Call Chain tab,
+  $$Variables tab, ERD (visual diagram), aur Explore ke andar ek AI
+  button.
+- **Deep Audit / Table Audit ko richer banana**: Auto-Enter Total,
+  Dynamic Access, Globals, Likely Typos jaise naye flags (reference
+  tool ke "Deep Audit" page jaisa).
+- **Download DOCX / Markdown** — har Explore detail page (Table/
+  Script) ke liye.
+- **Multi-tenant Dashboard + Servers + Live Logs**: clients/solutions
+  card view, server register karna, live log tail karna. Sab se bara
+  aur mushkil pending item — background service/websocket chahiye,
+  isliye roadmap mein sab se aakhir mein.
+- **Solution-level page**: DDR/SAX snapshot history table ek solution
+  ke andar, "Daily Audit"/"Live Connect"/"Monitor" buttons.
+- **Releases & Test Packs**: snapshot ko "release" tag karna, test
+  packs generate karna.
+
+---
+
+## Session 2026-07-22 (cont'd, 7) — Bug fix: snapshot dropdowns not refreshing after save/rename/delete
+
+**Bug report:** Master login/theme/password sab sahi kaam kar rahe the,
+lekin ek naya DDR upload snapshot ke saath save karne ke baad bhi
+Explore tab ke dropdown mein "No snapshots saved yet" hi dikh raha
+tha — jab tak page reload (re-login) na ho.
+
+**Root cause:** `/analyse-ddr` submit handler snapshot save hone ke
+baad sirf `refreshSnapshots()`, `loadScriptAuditSnapshotOptions()`
+call karta tha — **Explore aur Table Audit dropdown is list mein kabhi
+add hi nahi hue the** jab wo dono tabs bane the. Wahi gap client/
+solution rename aur client/solution/snapshot delete handlers mein bhi
+tha (sirf `refreshSnapshots()` + kabhi kabhi `loadScriptAuditSnapshot
+Options()`/`loadTimeline()` call hoti thi, Explore/Table Audit kabhi
+nahi).
+
+**Fix:** Ek naya shared helper `refreshAllSnapshotDependentLists()`
+banaya jo sabhi 6 jagah ek sath refresh karta hai (`refreshSnapshots`,
+`loadScriptAuditSnapshotOptions`, `loadTableAuditSnapshotOptions`,
+`loadExploreSnapshotOptions`, `loadTimeline`, `loadDashboard`) — aur
+in 6 jagah use kiya: naya snapshot save hone ke baad, client rename,
+client delete, solution rename, solution delete, snapshot delete, aur
+login ke baad ka reload bhi. Ab jahan bhi koi naya "snapshot list
+dikhane wala tab" future mein add ho, sirf isi ek helper function mein
+add karna hoga — har jagah alag se yaad rakhne ki zaroorat nahi.
+
+**Data-shape review (isi session mein):** User ne poocha ke Tables/
+Fields/Scripts/Layouts/Relationships ka data sahi fetch ho raha hai ya
+nahi — `explore.py`, `table_audit.py`, `script_audit.py`,
+`call_chain.py`, aur `ddr_parser.py` ke beech har field-name
+line-by-line cross-check kiya (jaise `field_objects` ke `table`/`field`
+keys, predicates ke `left_field`/`right_field` shape, script issues ke
+`severity`/`label`/`detail`). Koi mismatch nahi mila — asal masla sirf
+upar wala dropdown-refresh bug tha.
