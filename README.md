@@ -177,25 +177,6 @@ on screen.
 
 ---
 
-## 5. Recording a demo
-
-A demo should show all three flows in one short recording:
-
-1. Start the tool (`docker compose up`), open `http://localhost:8000`
-2. **DDR tab** — upload a DDR file, click Run Analysis, show the
-   findings table populate with colour-coded results
-3. **Script tab** — paste a sample script, click Review, show the AI
-   findings appear
-4. **SQL tab** — paste a sample SQL statement (ideally one with an
-   obvious issue, e.g. `SELECT * FROM Employees WHERE ID = " & $id & "`),
-   click Review, show both the findings **and** the rewritten SQL box
-5. Click **Download Report** once to show the standalone HTML file
-   being saved
-
-Any free screen recorder works (Windows: Xbox Game Bar with `Win+G`,
-or OBS Studio for more control).
-
----
 
 ## Project structure
 
