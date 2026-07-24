@@ -133,6 +133,13 @@ class Solution(Base):
     snapshots = relationship(
         "Snapshot", back_populates="solution", cascade="all, delete-orphan"
     )
+    releases = relationship(
+        "Release", back_populates="solution", cascade="all, delete-orphan"
+    )
+    audit_setting = relationship(
+        "AuditSetting", back_populates="solution", uselist=False,
+        cascade="all, delete-orphan",
+    )
 
 
 class Snapshot(Base):
@@ -164,6 +171,45 @@ class Snapshot(Base):
 
     client = relationship("Client", back_populates="snapshots")
     solution = relationship("Solution", back_populates="snapshots")
+
+
+class Release(Base):
+    """GROUP C feature: Releases & Test Packs. Names a snapshot pair
+    (baseline -> current) as a single deployable unit so a team can
+    refer to "Release 4.2" instead of two raw snapshot IDs. notes is
+    free text (e.g. a test-pack checklist pasted in by the user)."""
+
+    __tablename__ = "releases"
+
+    id = Column(Integer, primary_key=True)
+    solution_id = Column(Integer, ForeignKey("solutions.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    baseline_snapshot_id = Column(Integer, ForeignKey("snapshots.id"), nullable=False)
+    current_snapshot_id = Column(Integer, ForeignKey("snapshots.id"), nullable=False)
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    solution = relationship("Solution", back_populates="releases")
+
+
+class AuditSetting(Base):
+    """GROUP C feature: Daily Audit. One row per solution, toggled on/off
+    from the UI. There's no background scheduler process bundled here
+    (would need APScheduler + the app running 24/7) -- enabling it just
+    records intent + last_run_at, and /api/solutions/{id}/daily-audit/run
+    lets the UI (or an external cron hitting that endpoint) trigger the
+    actual run against the solution's latest two snapshots."""
+
+    __tablename__ = "audit_settings"
+    __table_args__ = (UniqueConstraint("solution_id", name="uq_audit_solution"),)
+
+    id = Column(Integer, primary_key=True)
+    solution_id = Column(Integer, ForeignKey("solutions.id"), nullable=False)
+    enabled = Column(Integer, default=0)  # 0/1 (SQLite has no native bool column here)
+    last_run_at = Column(DateTime, nullable=True)
+    last_result_summary = Column(String(500), default="")
+
+    solution = relationship("Solution", back_populates="audit_setting")
 
 
 class User(Base):
@@ -402,6 +448,141 @@ def rename_solution(solution_id: int, new_name: str) -> dict:
         db.commit()
         db.refresh(solution)
         return {"id": solution.id, "client_id": solution.client_id, "name": solution.name}
+    finally:
+        db.close()
+
+
+def _release_summary(r: "Release") -> dict:
+    return {
+        "id": r.id,
+        "solution_id": r.solution_id,
+        "name": r.name,
+        "baseline_snapshot_id": r.baseline_snapshot_id,
+        "current_snapshot_id": r.current_snapshot_id,
+        "notes": r.notes or "",
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+def list_releases(solution_id: int) -> list[dict]:
+    db = SessionLocal()
+    try:
+        releases = (
+            db.query(Release)
+            .filter(Release.solution_id == solution_id)
+            .order_by(Release.created_at.desc())
+            .all()
+        )
+        return [_release_summary(r) for r in releases]
+    finally:
+        db.close()
+
+
+def create_release(
+    solution_id: int, name: str, baseline_snapshot_id: int, current_snapshot_id: int, notes: str = ""
+) -> dict:
+    name = name.strip()
+    if not name:
+        raise ValueError("Release name cannot be empty.")
+    db = SessionLocal()
+    try:
+        if not db.query(Solution).filter(Solution.id == solution_id).first():
+            raise ValueError("Solution not found.")
+        release = Release(
+            solution_id=solution_id,
+            name=name,
+            baseline_snapshot_id=baseline_snapshot_id,
+            current_snapshot_id=current_snapshot_id,
+            notes=notes or "",
+        )
+        db.add(release)
+        db.commit()
+        db.refresh(release)
+        return _release_summary(release)
+    finally:
+        db.close()
+
+
+def delete_release(release_id: int) -> bool:
+    db = SessionLocal()
+    try:
+        release = db.query(Release).filter(Release.id == release_id).first()
+        if not release:
+            return False
+        db.delete(release)
+        db.commit()
+        return True
+    finally:
+        db.close()
+
+
+def get_audit_setting(solution_id: int) -> dict:
+    db = SessionLocal()
+    try:
+        setting = db.query(AuditSetting).filter(AuditSetting.solution_id == solution_id).first()
+        if not setting:
+            return {"solution_id": solution_id, "enabled": False, "last_run_at": None, "last_result_summary": ""}
+        return {
+            "solution_id": solution_id,
+            "enabled": bool(setting.enabled),
+            "last_run_at": setting.last_run_at.isoformat() if setting.last_run_at else None,
+            "last_result_summary": setting.last_result_summary or "",
+        }
+    finally:
+        db.close()
+
+
+def set_audit_enabled(solution_id: int, enabled: bool) -> dict:
+    db = SessionLocal()
+    try:
+        setting = db.query(AuditSetting).filter(AuditSetting.solution_id == solution_id).first()
+        if not setting:
+            setting = AuditSetting(solution_id=solution_id, enabled=int(enabled))
+            db.add(setting)
+        else:
+            setting.enabled = int(enabled)
+        db.commit()
+        return get_audit_setting(solution_id)
+    finally:
+        db.close()
+
+
+def run_daily_audit(solution_id: int) -> dict:
+    """Runs compare_snapshots() against the solution's two most recent
+    snapshots (if there are at least two) and records the result. Meant
+    to be triggered either by the "Run now" button or by an external
+    scheduler (cron / Task Scheduler) hitting the endpoint that wraps
+    this, since no background process runs inside this app itself."""
+    from compare_snapshots import compare_snapshots  # local import avoids a cycle at module load
+
+    db = SessionLocal()
+    try:
+        snaps = (
+            db.query(Snapshot)
+            .filter(Snapshot.solution_id == solution_id)
+            .order_by(Snapshot.created_at.desc())
+            .limit(2)
+            .all()
+        )
+        setting = db.query(AuditSetting).filter(AuditSetting.solution_id == solution_id).first()
+        if not setting:
+            setting = AuditSetting(solution_id=solution_id, enabled=1)
+            db.add(setting)
+
+        if len(snaps) < 2:
+            summary = "Not enough snapshots yet (need at least 2) to run a comparison."
+        else:
+            newer, older = snaps[0], snaps[1]
+            findings = compare_snapshots(
+                json.loads(older.parsed_data_json), json.loads(newer.parsed_data_json),
+                older.filename, newer.filename,
+            )
+            summary = f"{len(findings)} changes found between '{older.filename}' and '{newer.filename}'."
+
+        setting.last_run_at = datetime.now(timezone.utc)
+        setting.last_result_summary = summary
+        db.commit()
+        return get_audit_setting(solution_id)
     finally:
         db.close()
 

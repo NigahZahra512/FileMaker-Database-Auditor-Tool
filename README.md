@@ -140,7 +140,29 @@ rather than a fresh upload each time.
 **Snapshot History**: pick a client to see every DDR they've had
 analysed, reload any past one, or tick exactly two and hit **Compare
 Selected** to see what changed between them (fields/scripts/layouts/
-relationships added, removed, or modified).
+relationships added, removed, or modified). A comparison also shows a
+row of colour-coded **breaking / removed / modified / added** counts
+above the findings — see the "Compare badges" note below for exactly
+what each one counts.
+
+**Releases & Daily Audit** (new tab): pick a client and solution to:
+- Name a snapshot pair as a **Release** (e.g. "Release 4.2"), with
+  optional notes, so a deploy or test pack has a name instead of two
+  raw snapshot IDs. Click **Compare** on a saved release to jump
+  straight to that diff.
+- Turn on **Daily Audit** for a solution and click **Run Now** to
+  compare its two most recent snapshots on demand. There's no
+  background scheduler bundled in this app — for a truly automatic
+  daily run, point cron / Windows Task Scheduler at
+  `POST /api/solutions/{id}/daily-audit/run` once a day.
+
+*Compare badges heuristic:* **breaking** = Fields Removed + Scripts
+Removed (things other parts of the solution call by name); **removed**
+= Tables/Relationships/Layouts Removed; **modified** = every
+`*Changed` category; **added** = every `*Added` category. This is a
+judgment call, not a FileMaker-defined standard — see the
+`diff_summary()` docstring in `compare_snapshots.py` if you want to
+tune it.
 
 **Dashboard**: every client as a card — total snapshots, the latest
 upload's Critical/Warning/Info counts, and whether Critical findings

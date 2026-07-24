@@ -64,7 +64,7 @@ from ai_client import set_runtime_config, get_runtime_status, test_connection
 from unused_analysis import run_unused_rules
 from call_chain import build_call_chain
 from docx_report import build_docx_report, build_table_audit_docx
-from compare_snapshots import compare_snapshots
+from compare_snapshots import compare_snapshots, diff_summary
 from table_audit import build_table_summary, build_table_detail
 from script_audit import build_script_summary, build_script_detail
 from sql_audit import build_sql_audit
@@ -96,6 +96,12 @@ from database import (
     list_users,
     delete_user,
     change_password,
+    list_releases,
+    create_release,
+    delete_release,
+    get_audit_setting,
+    set_audit_enabled,
+    run_daily_audit,
 )
 
 app = FastAPI(title="FileMaker Database Auditor Tool")
@@ -222,6 +228,17 @@ class SolutionRenameRequest(BaseModel):
 class CompareRequest(BaseModel):
     snapshot_id_a: int
     snapshot_id_b: int
+
+
+class ReleaseCreateRequest(BaseModel):
+    name: str
+    baseline_snapshot_id: int
+    current_snapshot_id: int
+    notes: str = ""
+
+
+class AuditToggleRequest(BaseModel):
+    enabled: bool
 
 
 class LoginRequest(BaseModel):
@@ -575,6 +592,60 @@ async def delete_solution_endpoint(solution_id: int):
     return JSONResponse({"deleted": True})
 
 
+# ---------------------------------------------------------------------------
+# GROUP C: Releases & Test Packs -- names a snapshot pair as a single
+# deployable unit.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/solutions/{solution_id}/releases")
+async def get_releases(solution_id: int):
+    return JSONResponse(list_releases(solution_id))
+
+
+@app.post("/api/solutions/{solution_id}/releases")
+async def post_release(solution_id: int, body: ReleaseCreateRequest):
+    try:
+        release = create_release(
+            solution_id, body.name, body.baseline_snapshot_id, body.current_snapshot_id, body.notes
+        )
+        return JSONResponse(release)
+    except ValueError as e:
+        status = 404 if "not found" in str(e).lower() else 400
+        return JSONResponse({"error": str(e)}, status_code=status)
+
+
+@app.delete("/api/releases/{release_id}")
+async def delete_release_endpoint(release_id: int):
+    ok = delete_release(release_id)
+    if not ok:
+        return JSONResponse({"error": "Release not found."}, status_code=404)
+    return JSONResponse({"deleted": True})
+
+
+# ---------------------------------------------------------------------------
+# GROUP C: Daily Audit -- per-solution on/off toggle + "run now". No
+# background scheduler ships inside this app (would need APScheduler
+# running continuously); /run is meant to be called by the "Run now"
+# button or by an external cron hitting it once a day.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/solutions/{solution_id}/daily-audit")
+async def get_daily_audit(solution_id: int):
+    return JSONResponse(get_audit_setting(solution_id))
+
+
+@app.post("/api/solutions/{solution_id}/daily-audit")
+async def post_daily_audit(solution_id: int, body: AuditToggleRequest):
+    return JSONResponse(set_audit_enabled(solution_id, body.enabled))
+
+
+@app.post("/api/solutions/{solution_id}/daily-audit/run")
+async def post_daily_audit_run(solution_id: int):
+    return JSONResponse(run_daily_audit(solution_id))
+
+
 @app.get("/api/snapshots")
 async def get_snapshots(client_id: int | None = None, solution_id: int | None = None):
     return JSONResponse(list_snapshots(client_id=client_id, solution_id=solution_id))
@@ -677,6 +748,7 @@ async def compare_snapshots_endpoint(body: CompareRequest):
     try:
         findings = compare_snapshots(older["parsed_data"], newer["parsed_data"], label_older, label_newer)
         report = _build_report(findings)
+        report["badges"] = diff_summary(findings)
         report["compared"] = {
             "older": {k: older[k] for k in ("id", "client_name", "solution_name", "filename", "created_at")},
             "newer": {k: newer[k] for k in ("id", "client_name", "solution_name", "filename", "created_at")},

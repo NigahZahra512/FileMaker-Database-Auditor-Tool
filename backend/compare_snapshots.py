@@ -195,6 +195,38 @@ def _describe_field_changes(fa: dict, fb: dict) -> str:
     return "; ".join(parts) if parts else "attributes changed"
 
 
+def diff_summary(findings: list[dict]) -> dict:
+    """Rolls up compare_snapshots() findings into the 4 badge counts shown
+    on the Compare / Timeline screens (breaking / removed / modified / added),
+    matching the reference tool's colored badge row.
+
+    Heuristic (documented here since it's a judgment call, not a fact):
+      added    = every "* Added" category
+      removed  = structural removals that are usually safe to notice but
+                 rarely break something on their own (Tables/Relationships/
+                 Layouts Removed)
+      breaking = removals of things other parts of the solution actively
+                 call by name -- Fields Removed and Scripts Removed --
+                 since a missing field/script is the classic "deploy and
+                 something turns red" case
+      modified = every "* Changed" category
+    """
+    counts = {"breaking": 0, "removed": 0, "modified": 0, "added": 0}
+    breaking_categories = {"Fields Removed", "Scripts Removed"}
+    removed_categories = {"Tables Removed", "Relationships Removed", "Layouts Removed"}
+    for f in findings:
+        cat = f.get("category", "")
+        if cat in breaking_categories:
+            counts["breaking"] += 1
+        elif cat in removed_categories:
+            counts["removed"] += 1
+        elif cat.endswith("Changed"):
+            counts["modified"] += 1
+        elif cat.endswith("Added"):
+            counts["added"] += 1
+    return counts
+
+
 def _finding(category: str, severity: str, location: str, description: str, suggestion: str) -> dict:
     return {
         "module": "compare",

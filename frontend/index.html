@@ -345,19 +345,20 @@
   .header-auth-badge { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; }
 
   button.action {
-    background: var(--brand);
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark, #4338ca));
     color: white;
     border: none;
-    padding: 11px 24px;
+    padding: 11px 26px;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.2px;
     cursor: pointer;
     margin-top: 18px;
-    box-shadow: var(--shadow-sm);
-    transition: background 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.45), var(--shadow-sm);
+    transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   }
-  button.action:hover { background: var(--brand-dark); box-shadow: 0 4px 18px var(--brand-soft); transform: translateY(-1px); }
+  button.action:hover { box-shadow: 0 6px 24px rgba(99, 102, 241, 0.65); transform: translateY(-1px); }
   button.action:active { transform: translateY(0); }
   button.action:disabled { background: var(--border-strong); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
@@ -374,13 +375,21 @@
   }
   button.secondary:hover { background: var(--surface-alt); border-color: var(--brand); color: var(--brand); }
 
-  /* Highlighted download buttons (Download Report / Download DOCX) — sky blue */
+  /* Highlighted download buttons (Download Report / Download DOCX / table-audit Download DOCX) — same brand purple as Run Analysis, kept to secondary sizing so the visual hierarchy (primary action vs. export actions) still reads clearly */
   button.btn-download {
-    background: #87ceeb;
-    border: 1px solid #5bb8dd;
-    color: #063a52;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    border: 1px solid var(--brand-dark);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 10px var(--brand-soft);
   }
-  button.btn-download:hover { background: #6bbfdc; border-color: #4aa9cc; color: #04283a; }
+  button.btn-download:hover {
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+    border-color: var(--brand-dark);
+    color: #ffffff;
+    box-shadow: 0 6px 20px var(--brand-soft);
+    transform: translateY(-1px);
+  }
 
   /* Variables tab: status pills */
   .var-status { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
@@ -405,6 +414,37 @@
   .health-grade-badge { display:inline-block; margin-left:10px; font-size:20px; font-weight:800; padding:2px 12px; border-radius:8px; background:var(--surface-alt); border:1px solid var(--border-strong); vertical-align:middle; }
   .health-penalty-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13.5px; }
   .health-penalty-row:last-child { border-bottom:none; }
+
+  /* Health tab: per-category report cards */
+  .health-category-card { padding:0; margin-bottom:12px; overflow:hidden; }
+  .health-category-header { display:flex; align-items:center; gap:16px; padding:16px 20px; cursor:pointer; user-select:none; }
+  .health-category-header:hover { background:var(--surface-alt); }
+  .health-category-grade { flex:0 0 auto; width:40px; height:40px; border-radius:50%; border:2px solid var(--border-strong); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+  .health-category-grade.grade-a, .health-category-grade.grade-b { color:#1e7a34; border-color:#1e7a34; }
+  .health-category-grade.grade-c { color:#a86a00; border-color:#a86a00; }
+  .health-category-grade.grade-d, .health-category-grade.grade-f { color:#c62828; border-color:#c62828; }
+  .health-category-titleblock { flex:1 1 auto; min-width:0; }
+  .health-category-title { font-weight:700; font-size:15px; }
+  .health-category-summary { font-size:12.5px; color:var(--text-muted); margin-top:2px; }
+  .health-category-badges { flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+  .health-badge { font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; white-space:nowrap; }
+  .health-badge.badge-critical { background:#fdecec; color:#c62828; }
+  .health-badge.badge-warning { background:#fff6e0; color:#a86a00; }
+  .health-category-chevron { font-size:13px; color:var(--text-muted); transition:transform 0.15s ease; }
+  .health-category-chevron.open { transform:rotate(180deg); }
+  .health-category-body { padding:0 20px 16px 20px; border-top:1px solid var(--border); }
+  .health-finding-row { display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .health-finding-row:last-child { border-bottom:none; }
+  .health-dot { flex:0 0 auto; width:10px; height:10px; border-radius:50%; margin-top:5px; }
+  .health-dot.dot-critical { background:#c62828; }
+  .health-dot.dot-warning { background:#d99a2b; }
+  .health-dot.dot-info { background:#3a7bd5; }
+  .health-dot.dot-positive { background:#1e7a34; }
+  .health-finding-content { flex:1 1 auto; min-width:0; }
+  .health-finding-title { font-weight:700; font-size:13.5px; }
+  .health-finding-detail { font-size:12.5px; color:var(--text-muted); margin-top:2px; }
+  .health-finding-tags { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .health-tag { background:var(--surface-alt); border:1px solid var(--border); border-radius:6px; padding:3px 9px; font-size:11.5px; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; }
 
   .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 0 0 18px; }
   .summary-pill {
@@ -453,6 +493,43 @@
   .badge-warning::before { background: var(--warning); }
   .badge-info     { background: var(--info-bg); color: var(--info); border-color: var(--info-border); }
   .badge-info::before { background: var(--info); }
+
+  /* GROUP C feature: diff badge row (breaking/removed/modified/added)
+     on Compare Snapshots, matching the colored-pill convention already
+     used by .badge above but as a standalone summary row. */
+  .diff-badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 18px; }
+  .diff-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    border: 1px solid transparent;
+  }
+  .diff-badge-breaking { background: var(--critical-bg); color: var(--critical); border-color: var(--critical-border); }
+  .diff-badge-removed  { background: rgba(255, 107, 94, 0.20); color: var(--critical); border-color: var(--critical-border); }
+  .diff-badge-modified { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border); }
+  .diff-badge-added    { background: var(--info-bg); color: var(--info); border-color: var(--info-border); }
+
+  /* GROUP C feature: Daily Audit on/off toggle */
+  .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--border-strong); border-radius: 999px; transition: 0.15s;
+  }
+  .switch-track::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background: var(--surface); border-radius: 50%; transition: 0.15s;
+  }
+  .switch input:checked + .switch-track { background: var(--brand); }
+  .switch input:checked + .switch-track::before { transform: translateX(18px); }
+
+  .release-row {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); margin-bottom: 8px;
+  }
+  .release-row-info { flex: 1; min-width: 0; }
+  .release-row-title { font-weight: 700; font-size: 14px; color: var(--text); }
+  .release-row-sub { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
 
   .empty-state {
     color: var(--text-muted);
@@ -554,6 +631,23 @@
 
   .category-detail { display: none; margin: 18px 0 10px; }
   .category-detail.open { display: block; animation: fadeIn 0.18s ease; }
+
+  /* Quick SQL Check / Quick Script Check: collapsed by default behind a
+     clickable header, same accordion language as .category-box, so the
+     tab opens on the real (saved-snapshot) audit instead of a big empty
+     textarea. */
+  .quick-check-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .quick-check-header .quick-check-text { flex: 1; }
+  .quick-check-header .chevron { color: var(--text-muted); font-size: 12px; margin-top: 3px; transition: transform 0.15s ease; flex-shrink: 0; }
+  .quick-check-card.open .quick-check-header .chevron { transform: rotate(90deg); color: var(--brand); }
+  .quick-check-body { display: none; margin-top: 16px; }
+  .quick-check-card.open .quick-check-body { display: block; animation: fadeIn 0.18s ease; }
 
   /* STEP 1 (roadmap): snapshot save controls + snapshot history panel */
   .snapshot-controls {
@@ -1049,30 +1143,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       DDR Analysis
     </button>
-    <button class="tab-btn" data-tab="script">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-      Quick Script Check
-    </button>
-    <button class="tab-btn" data-tab="sql">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-      Quick SQL Check
-    </button>
     <button class="tab-btn" data-tab="sql-audit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M8 12h8M8 16h5"/></svg>
       ExecuteSQL Audit
     </button>
-    <button class="tab-btn" data-tab="variables">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3m0 12v3m8-18v3m0 12v3M4 8h3m10 0h3M4 16h3m10 0h3"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>
-      Variables
-    </button>
-    <button class="tab-btn" data-tab="erd">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="6" rx="1.2"/><rect x="14" y="3" width="7" height="6" rx="1.2"/><rect x="8.5" y="15" width="7" height="6" rx="1.2"/><path d="M6.5 9v3.5h9.5V9M12 12.5V15"/></svg>
-      ERD
-    </button>
-    <button class="tab-btn" data-tab="health">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6c0 4.7-8.8 10.4-8.8 10.4S3.2 13.3 3.2 8.6a4.6 4.6 0 018.8-1.9 4.6 4.6 0 018.8 1.9z"/><path d="M7 11h2l1.5-3L12.5 14 14 11h3"/></svg>
-      Health Score
-    </button>
+
     <button class="tab-btn" data-tab="snapshots">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Snapshot History
@@ -1096,6 +1171,10 @@
     <button class="tab-btn" data-tab="explore">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Explore
+    </button>
+    <button class="tab-btn" data-tab="releases">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l2-1.14"/><polyline points="12 22.5 12 12"/><path d="M20 12l-8 4.5"/><path d="M2.5 8.5L12 13.5l9.5-5"/></svg>
+      Releases
     </button>
   </nav>
 
@@ -1137,32 +1216,25 @@
   </div>
 
   <!-- TAB 2: Script -->
-  <div class="tab-panel" id="tab-script">
-    <div class="card">
-      <p class="card-label">Quick Script Check</p>
-      <p class="card-hint">For a short set of steps you want AI feedback on. For a complete FileMaker solution, use Script Audit with a saved DDR snapshot.</p>
-      <textarea id="script-text" placeholder="Script name: Send Reminder&#10;Steps:&#10;  1. Set Variable [$id]&#10;  2. Delete Record [No dialog]&#10;  ..."></textarea>
-      <br>
-      <button class="action" id="script-run-btn">Review</button>
-    </div>
-    <div id="script-results"></div>
-  </div>
-
-  <!-- TAB 3: SQL -->
-  <div class="tab-panel" id="tab-sql">
-    <div class="card">
-      <p class="card-label">Quick SQL Check</p>
-      <p class="card-hint">Paste one SQL statement for an AI review and suggested rewrite. For all ExecuteSQL steps in a FileMaker solution, use ExecuteSQL Audit with a saved DDR snapshot.</p>
-      <textarea id="sql-text" placeholder="SELECT * FROM Employees WHERE ID = &quot; & $userInput & &quot;"></textarea>
-      <br>
-      <button class="action" id="sql-run-btn">Review</button>
+  <!-- Saved DDR ExecuteSQL Audit (also holds the Quick SQL Check card) -->
+  <div class="tab-panel" id="tab-sql-audit">
+    <div class="card quick-check-card" id="sql-quick-card">
+      <div class="quick-check-header" onclick="toggleQuickCheck('sql')">
+        <div class="quick-check-text">
+          <p class="card-label" style="margin-bottom:4px;">Quick SQL Check</p>
+          <p class="card-hint" style="margin-bottom:0;">Paste one SQL statement for an AI review and suggested rewrite. For all ExecuteSQL steps in a FileMaker solution, use the saved-snapshot audit below instead.</p>
+        </div>
+        <span class="chevron">&#9656;</span>
+      </div>
+      <div class="quick-check-body" id="sql-quick-body">
+        <textarea id="sql-text" placeholder="SELECT * FROM Employees WHERE ID = &quot; & $userInput & &quot;"></textarea>
+        <br>
+        <button class="action" id="sql-run-btn">Review</button>
+      </div>
     </div>
     <div id="sql-results"></div>
     <div id="sql-rewrite-box"></div>
-  </div>
 
-  <!-- Saved DDR ExecuteSQL Audit -->
-  <div class="tab-panel" id="tab-sql-audit">
     <div class="card">
       <p class="card-label">ExecuteSQL Audit</p>
       <p class="card-hint">Find ExecuteSQL-related steps directly in a saved DDR snapshot. Static queries receive rule-based flags; dynamic expressions are clearly marked for manual runtime verification.</p>
@@ -1173,55 +1245,6 @@
       </div>
     </div>
     <div id="sql-audit-list"></div>
-  </div>
-
-  <!-- Saved DDR Variable Tracking ($$Globals / $locals) -->
-  <div class="tab-panel" id="tab-variables">
-    <div class="card">
-      <p class="card-label">$$Variable Tracking</p>
-      <p class="card-hint">All $$global and $local variables in a saved DDR snapshot, with set/get locations. A variable that is only ever set (never read) is flagged as possible dead code.</p>
-      <div class="script-audit-toolbar">
-        <select id="variables-client-select"><option value="">All clients</option></select>
-        <select id="variables-snapshot-select"><option value="">Choose a snapshot...</option></select>
-        <input id="variables-search" type="search" placeholder="Search variable name...">
-      </div>
-    </div>
-    <div id="variables-stats-wrap"></div>
-    <div class="card explore-subtabs-card" id="variables-subtabs-card" style="display:none;">
-      <div class="explore-subtabs" id="variables-subtabs">
-        <button class="explore-subtab-btn active" data-var-tab="globals">$$Globals</button>
-        <button class="explore-subtab-btn" data-var-tab="locals">$Locals</button>
-      </div>
-    </div>
-    <div id="variables-list-wrap"></div>
-    <div id="variables-detail-wrap"></div>
-  </div>
-
-  <!-- Saved DDR ERD Overview -->
-  <div class="tab-panel" id="tab-erd">
-    <div class="card">
-      <p class="card-label">ERD Overview</p>
-      <p class="card-hint">Table relationship graph for a saved DDR snapshot — how many isolated clusters the tables fall into, and which tables have no relationships at all ("orphan tables").</p>
-      <div class="script-audit-toolbar">
-        <select id="erd-client-select"><option value="">All clients</option></select>
-        <select id="erd-snapshot-select"><option value="">Choose a snapshot...</option></select>
-      </div>
-    </div>
-    <div id="erd-stats-wrap"></div>
-    <div id="erd-list-wrap"></div>
-  </div>
-
-  <!-- Saved DDR Health Score -->
-  <div class="tab-panel" id="tab-health">
-    <div class="card">
-      <p class="card-label">Health Score</p>
-      <p class="card-hint">One overall score (0–100) for a saved DDR snapshot, combining its saved Critical/Warning/Info findings with structural signals (unused fields/scripts, always-evaluate calcs, unstored calcs, dead-code variables, orphan tables).</p>
-      <div class="script-audit-toolbar">
-        <select id="health-client-select"><option value="">All clients</option></select>
-        <select id="health-snapshot-select"><option value="">Choose a snapshot...</option></select>
-      </div>
-    </div>
-    <div id="health-wrap"></div>
   </div>
 
   <!-- TAB 4: Snapshot History (its own page — separate from DDR Analysis) -->
@@ -1245,8 +1268,24 @@
     <div id="ddr-compare-results"></div>
   </div>
 
-  <!-- Saved DDR Script Audit -->
+  <!-- Saved DDR Script Audit (also holds the Quick Script Check card) -->
   <div class="tab-panel" id="tab-script-audit">
+    <div class="card quick-check-card" id="script-quick-card">
+      <div class="quick-check-header" onclick="toggleQuickCheck('script')">
+        <div class="quick-check-text">
+          <p class="card-label" style="margin-bottom:4px;">Quick Script Check</p>
+          <p class="card-hint" style="margin-bottom:0;">For a short set of steps you want AI feedback on. For a complete FileMaker solution, use the saved-snapshot audit below instead.</p>
+        </div>
+        <span class="chevron">&#9656;</span>
+      </div>
+      <div class="quick-check-body" id="script-quick-body">
+        <textarea id="script-text" placeholder="Script name: Send Reminder&#10;Steps:&#10;  1. Set Variable [$id]&#10;  2. Delete Record [No dialog]&#10;  ..."></textarea>
+        <br>
+        <button class="action" id="script-run-btn">Review</button>
+      </div>
+    </div>
+    <div id="script-results"></div>
+
     <div class="card">
       <p class="card-label">Script Audit</p>
       <p class="card-hint">Audit scripts directly from a saved DDR snapshot. Search, inspect steps, and review call relationships and risk flags without copying from FileMaker.</p>
@@ -1304,7 +1343,7 @@
   <div class="tab-panel" id="tab-explore">
     <div class="card" id="explore-intro-card">
       <p class="card-label">Explore</p>
-      <p class="card-hint">Pick a saved snapshot, then browse every table, field, script, layout, and relationship it contains — click any row to see the full detail.</p>
+      <p class="card-hint">Pick a saved snapshot, then browse every table, field, script, layout, and relationship it contains — plus $$variable tracking, the ERD overview, and an overall Health score — click any row to see the full detail.</p>
       <p class="explore-meta-line" id="explore-meta-line"></p>
       <div class="table-audit-picker">
         <select id="explore-client-select"><option value="">All clients</option></select>
@@ -1322,11 +1361,65 @@
         <button class="explore-subtab-btn" data-explore-tab="scripts">Scripts</button>
         <button class="explore-subtab-btn" data-explore-tab="layouts">Layouts</button>
         <button class="explore-subtab-btn" data-explore-tab="relationships">Relationships</button>
+        <button class="explore-subtab-btn" data-explore-tab="variables">Variables</button>
+        <button class="explore-subtab-btn" data-explore-tab="erd">ERD</button>
+        <button class="explore-subtab-btn" data-explore-tab="health">Health</button>
       </div>
     </div>
     <div id="explore-list-wrap"></div>
     <div id="explore-detail-wrap"></div>
     <div id="explore-deep-audit-view" style="display:none;"></div>
+  </div>
+
+  <!-- TAB: Releases & Daily Audit -->
+  <div class="tab-panel" id="tab-releases">
+    <div class="card">
+      <p class="card-label">Releases &amp; Daily Audit</p>
+      <p class="card-hint">Pick a client and solution to name a snapshot pair as a release, and to turn on daily comparisons of that solution's two most recent snapshots.</p>
+      <div class="table-audit-picker">
+        <select id="releases-client-select"><option value="">Choose a client...</option></select>
+        <select id="releases-solution-select" disabled><option value="">Choose a solution...</option></select>
+      </div>
+    </div>
+
+    <div class="card" id="daily-audit-card" style="display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+          <p class="card-label" style="margin:0;">Daily Audit</p>
+          <p class="card-hint" style="margin:4px 0 0;" id="daily-audit-status">Off -- turn on to compare this solution's two latest snapshots automatically.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="secondary" id="daily-audit-run-btn">Run Now</button>
+          <label class="switch">
+            <input type="checkbox" id="daily-audit-toggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+      </div>
+      <p class="card-hint" id="daily-audit-last-result" style="margin-top:10px;"></p>
+      <p class="card-hint" style="margin-top:10px; opacity:0.75;">Note: this app has no background process running 24/7, so "on" records the setting and "Run Now" runs it immediately. For a truly automatic daily run, point an external scheduler (cron / Task Scheduler) at this solution's daily-audit endpoint once a day.</p>
+    </div>
+
+    <div class="card" id="release-create-card" style="display:none;">
+      <p class="card-label" style="margin:0;">New Release</p>
+      <p class="card-hint">Name a snapshot pair (older = baseline, newer = current) as a release.</p>
+      <form id="release-create-form">
+        <label class="field-label" for="release-name-input">Release name</label>
+        <input type="text" id="release-name-input" class="field-input" placeholder="e.g. Release 4.2" required>
+        <div class="table-audit-picker" style="margin-top:10px;">
+          <select id="release-baseline-select" required><option value="">Baseline (older) snapshot...</option></select>
+          <select id="release-current-select" required><option value="">Current (newer) snapshot...</option></select>
+        </div>
+        <label class="field-label" for="release-notes-input" style="margin-top:10px;">Notes (optional)</label>
+        <textarea id="release-notes-input" class="field-input" rows="2" placeholder="Test-pack checklist, deployment notes..."></textarea>
+        <div class="modal-footer" style="padding:0; border:0; margin-top:12px;">
+          <span id="release-create-status"></span>
+          <button type="submit" class="action">Save Release</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="releases-list-wrap"></div>
   </div>
 
   </main>
@@ -1847,6 +1940,15 @@ function renderReport(containerId, report, sourceLabel, tabKey) {
 // ---------------------------------------------------------------------
 const DDR_CATEGORY_ORDER = ["Fields", "Scripts", "Relationships", "Layouts", "Unused Fields", "Unused Scripts", "Call Chain"];
 
+// Quick SQL Check / Quick Script Check: collapsed by default, expands on
+// click of the header. Independent per-card (not accordion-exclusive --
+// unlike the findings category boxes, there's no reason opening one should
+// force the other shut).
+function toggleQuickCheck(kind) {
+  const card = document.getElementById(`${kind}-quick-card`);
+  if (card) card.classList.toggle("open");
+}
+
 function groupFindingsByCategory(findings) {
   const groups = {};
   findings.forEach(f => {
@@ -1938,6 +2040,22 @@ function categorySectionsHtml(findings, tabKey) {
   return `<div class="category-grid">${boxesHtml}</div>${detailsHtml}`;
 }
 
+// GROUP C feature: Breaking/Removed/Modified/Added badge row, shown
+// above a Compare Snapshots result (report.badges only exists on the
+// /api/compare-snapshots response -- absent on a fresh DDR analysis,
+// so this quietly renders nothing there).
+function diffBadgeRowHtml(badges) {
+  if (!badges) return "";
+  return `
+    <div class="diff-badge-row">
+      <span class="diff-badge diff-badge-breaking">${badges.breaking} breaking</span>
+      <span class="diff-badge diff-badge-removed">${badges.removed} removed</span>
+      <span class="diff-badge diff-badge-modified">${badges.modified} modified</span>
+      <span class="diff-badge diff-badge-added">${badges.added} added</span>
+    </div>
+  `;
+}
+
 function renderDDRReport(containerId, report, sourceLabel, tabKey) {
   const container = document.getElementById(containerId);
   const { summary, findings } = report;
@@ -1956,6 +2074,7 @@ function renderDDRReport(containerId, report, sourceLabel, tabKey) {
         <div class="summary-pill pill-warning"><span class="stat-num">${summary.warning || 0}</span><span class="stat-label">Warning</span></div>
         <div class="summary-pill pill-info"><span class="stat-num">${summary.info || 0}</span><span class="stat-label">Info</span></div>
       </div>
+      ${diffBadgeRowHtml(report.badges)}
       ${categorySectionsHtml(findings, tabKey)}
       <div class="toolbar">
         <span></span>
@@ -2207,6 +2326,15 @@ async function loadClients() {
         allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.snapshot_count})</option>`).join("");
       sel.value = prevVal;
     }
+
+    // GROUP C feature: Releases & Daily Audit -- a release always
+    // belongs to one specific solution, so this select has no "All
+    // clients" option (there'd be nothing to create a release under).
+    const releasesClientSelect = document.getElementById("releases-client-select");
+    const prevReleasesClientValue = releasesClientSelect.value;
+    releasesClientSelect.innerHTML = `<option value="">Choose a client...</option>` +
+      allClients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+    releasesClientSelect.value = prevReleasesClientValue;
   } catch (err) {
     // Non-fatal -- the rest of the DDR tab still works without this.
     console.error("Could not load clients:", err);
@@ -2271,10 +2399,10 @@ function refreshAllSnapshotDependentLists() {
   loadExploreSnapshotOptions();
   loadTimeline();
   loadDashboard();
-  loadVariablesSnapshotOptions();
-  loadErdSnapshotOptions();
-  loadHealthSnapshotOptions();
   loadSqlAuditSnapshotOptions();
+  if (document.getElementById("releases-solution-select").value) {
+    loadReleaseSnapshotOptions();
+  }
 }
 
 async function refreshSnapshots() {
@@ -2546,233 +2674,6 @@ document.getElementById("sql-audit-snapshot-select").addEventListener("change", 
 document.getElementById("sql-audit-search").addEventListener("input", renderSqlAuditList);
 loadSqlAuditSnapshotOptions();
 
-// ---------------------------------------------------------------------
-// Variables tab: $$Global / $local variable tracking
-// ---------------------------------------------------------------------
-let variablesData = null;
-let variablesActiveTab = "globals";
-
-async function loadVariablesSnapshotOptions() {
-  const clientId = document.getElementById("variables-client-select").value;
-  const select = document.getElementById("variables-snapshot-select");
-  select.innerHTML = `<option value="">Loading snapshots...</option>`;
-  document.getElementById("variables-stats-wrap").innerHTML = "";
-  document.getElementById("variables-subtabs-card").style.display = "none";
-  document.getElementById("variables-list-wrap").innerHTML = "";
-  document.getElementById("variables-detail-wrap").innerHTML = "";
-  try {
-    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
-    const snapshots = await (await fetch(url)).json();
-    select.innerHTML = snapshots.length
-      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
-          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
-      : `<option value="">No saved snapshots</option>`;
-  } catch (err) {
-    select.innerHTML = `<option value="">Could not load snapshots</option>`;
-  }
-}
-
-function varStatusHtml(status) {
-  const cls = status === "OK" ? "var-status-ok" : status === "Read-only" ? "var-status-read-only" : "var-status-write-only";
-  return `<span class="var-status ${cls}">${escapeHtml(status)}</span>`;
-}
-
-function renderVariablesStats() {
-  const wrap = document.getElementById("variables-stats-wrap");
-  if (!variablesData) { wrap.innerHTML = ""; return; }
-  const s = variablesData.stats;
-  wrap.innerHTML = `<div class="card explore-stats-strip">
-    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_globals}</div><div class="explore-stat-label">$$Global Variables</div></div>
-    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_locals}</div><div class="explore-stat-label">$Local Variables</div></div>
-    <div class="explore-stat-card"><div class="explore-stat-value accent">${s.write_only_count}</div><div class="explore-stat-label">Write-only (dead code?)</div></div>
-    <div class="explore-stat-card"><div class="explore-stat-value">${s.read_only_globals_count}</div><div class="explore-stat-label">Read-only Globals</div></div>
-  </div>`;
-}
-
-function renderVariablesList() {
-  const listWrap = document.getElementById("variables-list-wrap");
-  if (!variablesData) { listWrap.innerHTML = ""; return; }
-  const query = document.getElementById("variables-search").value.trim().toLowerCase();
-  const snapshotId = document.getElementById("variables-snapshot-select").value;
-  const rows = (variablesActiveTab === "globals" ? variablesData.globals : variablesData.locals)
-    .filter(r => !query || r.name.toLowerCase().includes(query));
-  if (!rows.length) {
-    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">No variables match this search.</div></div>`;
-    return;
-  }
-  listWrap.innerHTML = `<div class="card"><div style="overflow:auto"><table><thead><tr><th>Variable</th><th>Sets</th><th>Gets</th><th>Status</th></tr></thead><tbody>${rows.map(r => `
-    <tr>
-      <td><span class="var-name" onclick="loadVariableDetail(${snapshotId}, '${escapeHtml(r.name).replace(/'/g, "\\'")}')">${escapeHtml(r.name)}</span></td>
-      <td>${r.sets}</td>
-      <td>${r.gets}</td>
-      <td>${varStatusHtml(r.status)}</td>
-    </tr>`).join("")}</tbody></table></div></div>`;
-}
-
-async function loadVariablesData() {
-  const snapshotId = document.getElementById("variables-snapshot-select").value;
-  document.getElementById("variables-detail-wrap").innerHTML = "";
-  if (!snapshotId) {
-    variablesData = null;
-    document.getElementById("variables-stats-wrap").innerHTML = "";
-    document.getElementById("variables-subtabs-card").style.display = "none";
-    document.getElementById("variables-list-wrap").innerHTML = "";
-    return;
-  }
-  document.getElementById("variables-list-wrap").innerHTML = `<div class="card"><div class="dashboard-empty">Loading variables...</div></div>`;
-  try {
-    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not load variables.");
-    variablesData = data;
-    document.getElementById("variables-subtabs-card").style.display = "block";
-    renderVariablesStats();
-    renderVariablesList();
-  } catch (err) {
-    document.getElementById("variables-list-wrap").innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variables: ${escapeHtml(err.message)}</div></div>`;
-  }
-}
-
-async function loadVariableDetail(snapshotId, varName) {
-  const detailEl = document.getElementById("variables-detail-wrap");
-  detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ${escapeHtml(varName)}...</div></div>`;
-  try {
-    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit/${encodeURIComponent(varName)}`);
-    const detail = await res.json();
-    if (!res.ok) throw new Error(detail.error || "Could not load variable detail.");
-    const locRow = (loc, kind) => `<div class="rel-row"><strong>${kind}</strong> — ${
-      loc.script_name ? `${escapeHtml(loc.script_name)} · step #${loc.position ?? ""} (${escapeHtml(loc.step_name || "")})`
-                       : `${escapeHtml(loc.table_name)}::${escapeHtml(loc.field_name)} (calculation)`
-    }<div class="script-step-text" style="margin-top:4px;">${escapeHtml(loc.text || "")}</div></div>`;
-    detailEl.innerHTML = `<div class="card">
-      <div class="table-detail-title"><div><p class="card-label" style="margin:0;">${escapeHtml(detail.name)}</p><p class="card-hint">${varStatusHtml(detail.status)} · Sets: ${detail.sets} · Gets: ${detail.gets}</p></div><button class="secondary" onclick="document.getElementById('variables-detail-wrap').innerHTML=''">Close</button></div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Set locations (${detail.set_locations.length})</div>${detail.set_locations.length ? detail.set_locations.map(l => locRow(l, "Set")).join("") : `<div class="snapshot-empty">No Set Variable step found for this variable.</div>`}</div>
-      <div class="table-detail-section"><div class="table-detail-section-title">Get locations (${detail.get_locations.length})</div>${detail.get_locations.length ? detail.get_locations.map(l => locRow(l, "Get")).join("") : `<div class="snapshot-empty">This variable is never read anywhere detected.</div>`}</div>
-    </div>`;
-  } catch (err) {
-    detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variable detail: ${escapeHtml(err.message)}</div></div>`;
-  }
-}
-
-document.getElementById("variables-client-select").addEventListener("change", loadVariablesSnapshotOptions);
-document.getElementById("variables-snapshot-select").addEventListener("change", loadVariablesData);
-document.getElementById("variables-search").addEventListener("input", renderVariablesList);
-document.getElementById("variables-subtabs").addEventListener("click", (e) => {
-  const btn = e.target.closest(".explore-subtab-btn");
-  if (!btn) return;
-  variablesActiveTab = btn.dataset.varTab;
-  document.querySelectorAll("#variables-subtabs .explore-subtab-btn").forEach(b => b.classList.toggle("active", b === btn));
-  renderVariablesList();
-});
-loadVariablesSnapshotOptions();
-
-// ---------------------------------------------------------------------
-// ERD tab: table relationship graph overview (clusters / orphan tables)
-// ---------------------------------------------------------------------
-async function loadErdSnapshotOptions() {
-  const clientId = document.getElementById("erd-client-select").value;
-  const select = document.getElementById("erd-snapshot-select");
-  select.innerHTML = `<option value="">Loading snapshots...</option>`;
-  document.getElementById("erd-stats-wrap").innerHTML = "";
-  document.getElementById("erd-list-wrap").innerHTML = "";
-  try {
-    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
-    const snapshots = await (await fetch(url)).json();
-    select.innerHTML = snapshots.length
-      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
-          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
-      : `<option value="">No saved snapshots</option>`;
-  } catch (err) {
-    select.innerHTML = `<option value="">Could not load snapshots</option>`;
-  }
-}
-
-async function loadErdData() {
-  const snapshotId = document.getElementById("erd-snapshot-select").value;
-  const statsWrap = document.getElementById("erd-stats-wrap");
-  const listWrap = document.getElementById("erd-list-wrap");
-  if (!snapshotId) { statsWrap.innerHTML = ""; listWrap.innerHTML = ""; return; }
-  listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ERD overview...</div></div>`;
-  try {
-    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/erd`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not load ERD overview.");
-    const s = data.stats;
-    statsWrap.innerHTML = `<div class="card explore-stats-strip">
-      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_tables}</div><div class="explore-stat-label">Tables</div></div>
-      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_relationships}</div><div class="explore-stat-label">Relationships</div></div>
-      <div class="explore-stat-card"><div class="explore-stat-value">${s.cluster_count}</div><div class="explore-stat-label">Clusters</div></div>
-      <div class="explore-stat-card"><div class="explore-stat-value accent">${s.orphan_table_count}</div><div class="explore-stat-label">Orphan Tables</div></div>
-    </div>`;
-    const clusterCards = data.clusters.map((c, i) => `<div class="card erd-cluster-card">
-      <div class="erd-cluster-title">Cluster ${i + 1} — ${c.size} table${c.size === 1 ? "" : "s"}</div>
-      ${c.tables.map(t => `<span class="erd-table-chip">${escapeHtml(t)}</span>`).join("")}
-    </div>`).join("");
-    const orphanCard = data.orphan_tables.length ? `<div class="card">
-      <p class="card-label" style="margin-bottom:8px;">Orphan Tables (no relationships)</p>
-      ${data.orphan_tables.map(t => `<span class="erd-table-chip orphan">${escapeHtml(t)}</span>`).join("")}
-    </div>` : "";
-    listWrap.innerHTML = orphanCard + clusterCards;
-  } catch (err) {
-    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load ERD overview: ${escapeHtml(err.message)}</div></div>`;
-  }
-}
-
-document.getElementById("erd-client-select").addEventListener("change", loadErdSnapshotOptions);
-document.getElementById("erd-snapshot-select").addEventListener("change", loadErdData);
-loadErdSnapshotOptions();
-
-// ---------------------------------------------------------------------
-// Health tab: one overall score, combining saved findings + structural stats
-// ---------------------------------------------------------------------
-async function loadHealthSnapshotOptions() {
-  const clientId = document.getElementById("health-client-select").value;
-  const select = document.getElementById("health-snapshot-select");
-  select.innerHTML = `<option value="">Loading snapshots...</option>`;
-  document.getElementById("health-wrap").innerHTML = "";
-  try {
-    const url = clientId ? `${API_BASE}/api/snapshots?client_id=${clientId}` : `${API_BASE}/api/snapshots`;
-    const snapshots = await (await fetch(url)).json();
-    select.innerHTML = snapshots.length
-      ? `<option value="">Choose a snapshot...</option>` + snapshots.map(s =>
-          `<option value="${s.id}">${escapeHtml(s.client_name)} — ${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
-      : `<option value="">No saved snapshots</option>`;
-  } catch (err) {
-    select.innerHTML = `<option value="">Could not load snapshots</option>`;
-  }
-}
-
-async function loadHealthData() {
-  const snapshotId = document.getElementById("health-snapshot-select").value;
-  const wrap = document.getElementById("health-wrap");
-  if (!snapshotId) { wrap.innerHTML = ""; return; }
-  wrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading health score...</div></div>`;
-  try {
-    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/health`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not load health score.");
-    const gradeClass = `grade-${data.grade.toLowerCase()}`;
-    const penalties = data.penalties.length
-      ? data.penalties.map(p => `<div class="health-penalty-row"><span>${escapeHtml(p.label)} (${p.count})</span><span>-${p.points_lost} pts</span></div>`).join("")
-      : `<div class="snapshot-empty">No penalties found — nothing pulled the score down.</div>`;
-    wrap.innerHTML = `
-      <div class="card health-score-card">
-        <div class="health-score-number ${gradeClass}">${data.score}<span style="font-size:20px;">/100</span></div>
-        <div><span class="health-grade-badge">Grade ${escapeHtml(data.grade)}</span></div>
-      </div>
-      <div class="card">
-        <p class="card-label" style="margin-bottom:8px;">What's pulling the score down</p>
-        ${penalties}
-      </div>`;
-  } catch (err) {
-    wrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load health score: ${escapeHtml(err.message)}</div></div>`;
-  }
-}
-
-document.getElementById("health-client-select").addEventListener("change", loadHealthSnapshotOptions);
-document.getElementById("health-snapshot-select").addEventListener("change", loadHealthData);
-loadHealthSnapshotOptions();
-
 loadClients();
 refreshSnapshots();
 
@@ -3042,6 +2943,8 @@ loadTableAuditSnapshotOptions();
 let exploreData = null;       // full response from /explore for the current snapshot
 let exploreActiveTab = "tables";
 let exploreOpenKey = null;    // "type:key" of whichever row is currently expanded, or null
+let exploreVariablesData = null;   // cached /variable-audit response for the Variables sub-tab
+let exploreVariablesSubTab = "globals";
 
 async function loadExploreSnapshotOptions() {
   const clientId = document.getElementById("explore-client-select").value;
@@ -3067,6 +2970,7 @@ async function loadExploreSnapshotOptions() {
 function resetExploreView() {
   exploreData = null;
   exploreOpenKey = null;
+  exploreVariablesData = null;
   document.getElementById("explore-meta-line").textContent = "";
   document.getElementById("explore-intro-card").style.display = "block";
   document.getElementById("explore-search-card").style.display = "none";
@@ -3100,8 +3004,10 @@ async function loadExploreData() {
     };
     document.querySelectorAll(".explore-subtab-btn").forEach(btn => {
       const key = btn.dataset.exploreTab;
-      const label = key.charAt(0).toUpperCase() + key.slice(1);
-      btn.textContent = `${label} (${subtabCounts[key].toLocaleString()})`;
+      if (subtabCounts[key] !== undefined) {
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        btn.textContent = `${label} (${subtabCounts[key].toLocaleString()})`;
+      }
       btn.classList.toggle("active", key === "tables");
     });
 
@@ -3140,6 +3046,8 @@ function switchExploreSubtab(tabKey) {
     btn.classList.toggle("active", btn.dataset.exploreTab === tabKey));
   document.getElementById("explore-search").value = "";
   document.getElementById("explore-detail-wrap").innerHTML = "";
+  document.getElementById("explore-search-card").style.display =
+    (tabKey === "variables" || tabKey === "erd" || tabKey === "health") ? "none" : "block";
   renderExploreList();
 }
 
@@ -3171,10 +3079,281 @@ function renderExploreList() {
     const rows = exploreData.layouts.map((l, i) => ({ ...l, _i: i }));
     if (!rows.length) { listWrap.innerHTML = emptyExploreCard("This snapshot has no layouts."); return; }
     listWrap.innerHTML = wrapExploreTable(["Layout", "Objects", "Fields Placed", "Portals"], layoutRowsHtml(rows));
-  } else if (exploreActiveTab === "relationships") {
-    const rows = exploreData.relationships.map((r, i) => ({ ...r, _i: i }));
-    if (!rows.length) { listWrap.innerHTML = emptyExploreCard("This snapshot has no relationships."); return; }
-    listWrap.innerHTML = wrapExploreTable(["Left Table", "Right Table", "Predicates"], relRowsHtml(rows));
+  } else if (exploreActiveTab === "variables") {
+    loadExploreVariables(snapshotId);
+  } else if (exploreActiveTab === "erd") {
+    loadExploreErd(snapshotId);
+  } else if (exploreActiveTab === "health") {
+    loadExploreHealth(snapshotId);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Explore sub-tab: Variables ($$Global / $local tracking) -- reuses the
+// snapshot already picked at the top of Explore, no separate picker.
+// ---------------------------------------------------------------------
+function varStatusHtml(status) {
+  const cls = status === "OK" ? "var-status-ok" : status === "Read-only" ? "var-status-read-only" : "var-status-write-only";
+  return `<span class="var-status ${cls}">${escapeHtml(status)}</span>`;
+}
+
+async function loadExploreVariables(snapshotId) {
+  const listWrap = document.getElementById("explore-list-wrap");
+  if (!snapshotId) { listWrap.innerHTML = ""; return; }
+  if (!exploreVariablesData || String(exploreVariablesData._snapshotId) !== String(snapshotId)) {
+    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading variables...</div></div>`;
+    try {
+      const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not load variables.");
+      data._snapshotId = snapshotId;
+      exploreVariablesData = data;
+      exploreVariablesSubTab = "globals";
+    } catch (err) {
+      listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variables: ${escapeHtml(err.message)}</div></div>`;
+      return;
+    }
+  }
+  renderExploreVariables(snapshotId);
+}
+
+function renderExploreVariables(snapshotId) {
+  if (exploreActiveTab !== "variables" || !exploreVariablesData) return;
+  const listWrap = document.getElementById("explore-list-wrap");
+  const s = exploreVariablesData.stats;
+  const rows = exploreVariablesSubTab === "globals" ? exploreVariablesData.globals : exploreVariablesData.locals;
+  const statsHtml = `<div class="card explore-stats-strip">
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_globals}</div><div class="explore-stat-label">$$Global Variables</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.total_locals}</div><div class="explore-stat-label">$Local Variables</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value accent">${s.write_only_count}</div><div class="explore-stat-label">Write-only (dead code?)</div></div>
+    <div class="explore-stat-card"><div class="explore-stat-value">${s.read_only_globals_count}</div><div class="explore-stat-label">Read-only Globals</div></div>
+  </div>`;
+  const subtabsHtml = `<div class="card explore-subtabs-card">
+    <div class="explore-subtabs">
+      <button class="explore-subtab-btn ${exploreVariablesSubTab === "globals" ? "active" : ""}" onclick="setExploreVariablesSubTab('globals')">$$Globals (${exploreVariablesData.globals.length})</button>
+      <button class="explore-subtab-btn ${exploreVariablesSubTab === "locals" ? "active" : ""}" onclick="setExploreVariablesSubTab('locals')">$Locals (${exploreVariablesData.locals.length})</button>
+    </div>
+  </div>`;
+  const tableHtml = rows.length
+    ? `<div class="card"><div style="overflow:auto"><table><thead><tr><th>Variable</th><th>Sets</th><th>Gets</th><th>Status</th></tr></thead><tbody>${rows.map(r => `
+      <tr>
+        <td><span class="var-name" onclick="loadExploreVariableDetail('${snapshotId}', '${escapeHtml(r.name).replace(/'/g, "\\'")}')">${escapeHtml(r.name)}</span></td>
+        <td>${r.sets}</td>
+        <td>${r.gets}</td>
+        <td>${varStatusHtml(r.status)}</td>
+      </tr>`).join("")}</tbody></table></div></div>`
+    : emptyExploreCard(`No ${exploreVariablesSubTab === "globals" ? "$$global" : "$local"} variables found.`);
+  listWrap.innerHTML = statsHtml + subtabsHtml + tableHtml;
+}
+
+function setExploreVariablesSubTab(sub) {
+  exploreVariablesSubTab = sub;
+  document.getElementById("explore-detail-wrap").innerHTML = "";
+  renderExploreVariables(document.getElementById("explore-snapshot-select").value);
+}
+
+async function loadExploreVariableDetail(snapshotId, varName) {
+  const detailEl = document.getElementById("explore-detail-wrap");
+  detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ${escapeHtml(varName)}...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/variable-audit/${encodeURIComponent(varName)}`);
+    const detail = await res.json();
+    if (!res.ok) throw new Error(detail.error || "Could not load variable detail.");
+    const locRow = (loc, kind) => `<div class="rel-row"><strong>${kind}</strong> — ${
+      loc.script_name ? `${escapeHtml(loc.script_name)} · step #${loc.position ?? ""} (${escapeHtml(loc.step_name || "")})`
+                       : `${escapeHtml(loc.table_name)}::${escapeHtml(loc.field_name)} (calculation)`
+    }<div class="script-step-text" style="margin-top:4px;">${escapeHtml(loc.text || "")}</div></div>`;
+    detailEl.innerHTML = `<div class="card">
+      <div class="table-detail-title"><div><p class="card-label" style="margin:0;">${escapeHtml(detail.name)}</p><p class="card-hint">${varStatusHtml(detail.status)} · Sets: ${detail.sets} · Gets: ${detail.gets}</p></div><button class="secondary" onclick="document.getElementById('explore-detail-wrap').innerHTML=''">Close</button></div>
+      <div class="table-detail-section"><div class="table-detail-section-title">Set locations (${detail.set_locations.length})</div>${detail.set_locations.length ? detail.set_locations.map(l => locRow(l, "Set")).join("") : `<div class="snapshot-empty">No Set Variable step found for this variable.</div>`}</div>
+      <div class="table-detail-section"><div class="table-detail-section-title">Get locations (${detail.get_locations.length})</div>${detail.get_locations.length ? detail.get_locations.map(l => locRow(l, "Get")).join("") : `<div class="snapshot-empty">This variable is never read anywhere detected.</div>`}</div>
+    </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load variable detail: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Explore sub-tab: ERD (relationship graph clusters / orphan tables)
+// ---------------------------------------------------------------------
+function buildErdDiagramSvg(data) {
+  const nodes = (data.layout && data.layout.nodes) || {};
+  const names = Object.keys(nodes);
+  if (!names.length) return "";
+  const PX = 900, PAD = 60;
+  const width = PX + PAD * 2;
+  const heightUnits = Math.max((data.layout && data.layout.height_units) || 0.25, 0.25);
+  const height = heightUnits * PX + PAD * 2;
+  const orphanSet = new Set(data.orphan_tables || []);
+  const pt = (n) => ({ x: nodes[n].x * PX + PAD, y: nodes[n].y * PX + PAD });
+
+  let edgesSvg = "";
+  for (const e of (data.edges || [])) {
+    if (!nodes[e.left] || !nodes[e.right]) continue;
+    const a = pt(e.left), b = pt(e.right);
+    const stroke = e.all_equal ? "#7c8cf8" : "#e0a53c";
+    const label = e.labels && e.labels.length ? e.labels.join("; ") : `${e.left} \u2194 ${e.right}`;
+    edgesSvg += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${stroke}" stroke-width="1.6" opacity="0.7"><title>${escapeHtml(label)}</title></line>`;
+  }
+
+  let nodesSvg = "";
+  for (const name of names) {
+    const p = pt(name);
+    const isOrphan = orphanSet.has(name);
+    const label = name.length > 15 ? name.slice(0, 13) + "\u2026" : name;
+    const fill = isOrphan ? "#fdecec" : "#1c2333";
+    const stroke = isOrphan ? "#e08585" : "#7c8cf8";
+    const textColor = isOrphan ? "#c62828" : "#e7ebff";
+    nodesSvg += `<g>
+      <title>${escapeHtml(name)}</title>
+      <rect x="${p.x - 58}" y="${p.y - 16}" width="116" height="32" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="1.4"/>
+      <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="${textColor}">${escapeHtml(label)}</text>
+    </g>`;
+  }
+
+  return `<div class="card">
+    <p class="card-label" style="margin-bottom:8px;">Relationship Diagram</p>
+    <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Lines = a defined relationship (blue = equal-key join, orange = looser/Cartesian predicate). Red boxes = orphan tables with no relationship at all. Hover any table or line for details.</p>
+    <div style="overflow:auto; max-height:640px; border-radius:12px; border:1px solid var(--border);">
+      <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:var(--surface); display:block;">
+        ${edgesSvg}
+        ${nodesSvg}
+      </svg>
+    </div>
+  </div>`;
+}
+
+async function loadExploreErd(snapshotId) {
+  const listWrap = document.getElementById("explore-list-wrap");
+  if (!snapshotId) { listWrap.innerHTML = ""; return; }
+  listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading ERD overview...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/erd`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load ERD overview.");
+    if (exploreActiveTab !== "erd") return;
+    const s = data.stats;
+    const statsHtml = `<div class="card explore-stats-strip">
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_tables}</div><div class="explore-stat-label">Tables</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.total_relationships}</div><div class="explore-stat-label">Relationships</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value">${s.cluster_count}</div><div class="explore-stat-label">Clusters</div></div>
+      <div class="explore-stat-card"><div class="explore-stat-value accent">${s.orphan_table_count}</div><div class="explore-stat-label">Orphan Tables</div></div>
+    </div>`;
+    const diagramHtml = buildErdDiagramSvg(data);
+    const clusterCards = data.clusters.map((c, i) => `<div class="card erd-cluster-card">
+      <div class="erd-cluster-title">Cluster ${i + 1} — ${c.size} table${c.size === 1 ? "" : "s"}</div>
+      ${c.tables.map(t => `<span class="erd-table-chip">${escapeHtml(t)}</span>`).join("")}
+    </div>`).join("");
+    const orphanCard = data.orphan_tables.length ? `<div class="card">
+      <p class="card-label" style="margin-bottom:8px;">Orphan Tables (no relationships)</p>
+      ${data.orphan_tables.map(t => `<span class="erd-table-chip orphan">${escapeHtml(t)}</span>`).join("")}
+    </div>` : "";
+    listWrap.innerHTML = statsHtml + diagramHtml + orphanCard + clusterCards;
+  } catch (err) {
+    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load ERD overview: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Explore sub-tab: Health (one overall score for this snapshot)
+// ---------------------------------------------------------------------
+function toggleHealthCategory(key) {
+  const body = document.getElementById(`health-body-${key}`);
+  const chevron = document.getElementById(`health-chevron-${key}`);
+  if (!body) return;
+  const open = body.style.display !== "none";
+  body.style.display = open ? "none" : "block";
+  if (chevron) chevron.classList.toggle("open", !open);
+}
+
+function _healthFindingRow(f) {
+  const tags = (f.tags || []).map(t => `<span class="health-tag">${escapeHtml(String(t))}</span>`).join("");
+  return `
+    <div class="health-finding-row">
+      <span class="health-dot dot-${escapeHtml(f.severity)}"></span>
+      <div class="health-finding-content">
+        <div class="health-finding-title">${escapeHtml(f.title)}</div>
+        <div class="health-finding-detail">${escapeHtml(f.detail)}</div>
+        ${tags ? `<div class="health-finding-tags">${tags}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+function _healthCategoryCard(cat, defaultOpen) {
+  const gradeClass = `grade-${(cat.grade || "").toLowerCase()}`;
+  const badges = [
+    cat.critical_count ? `<span class="health-badge badge-critical">${cat.critical_count} CRITICAL</span>` : "",
+    cat.warning_count ? `<span class="health-badge badge-warning">${cat.warning_count} WARNING${cat.warning_count > 1 ? "S" : ""}</span>` : "",
+  ].join("");
+  const body = cat.findings.length
+    ? cat.findings.map(_healthFindingRow).join("")
+    : `<div class="snapshot-empty" style="padding:14px 0;">Nothing to report in this category.</div>`;
+  return `
+    <div class="card health-category-card">
+      <div class="health-category-header" onclick="toggleHealthCategory('${cat.key}')">
+        <div class="health-category-grade ${gradeClass}">${escapeHtml(cat.grade)}</div>
+        <div class="health-category-titleblock">
+          <div class="health-category-title">${escapeHtml(cat.label)}</div>
+          <div class="health-category-summary">${escapeHtml(cat.summary)}</div>
+        </div>
+        <div class="health-category-badges">
+          ${badges}
+          <span class="health-category-chevron${defaultOpen ? " open" : ""}" id="health-chevron-${cat.key}">▾</span>
+        </div>
+      </div>
+      <div class="health-category-body" id="health-body-${cat.key}" style="display:${defaultOpen ? "block" : "none"};">
+        ${body}
+      </div>
+    </div>`;
+}
+
+async function loadExploreHealth(snapshotId) {
+  const listWrap = document.getElementById("explore-list-wrap");
+  if (!snapshotId) { listWrap.innerHTML = ""; return; }
+  listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Loading health report...</div></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots/${snapshotId}/health`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load health report.");
+    if (exploreActiveTab !== "health") return;
+    const gradeClass = `grade-${data.grade.toLowerCase()}`;
+    const s = data.structural_stats || {};
+    const statPills = [
+      ["total_tables", "Tables"], ["total_fields", "Fields"], ["total_scripts", "Scripts"],
+      ["total_layouts", "Layouts"], ["total_relationships", "Relationships"],
+    ].map(([key, label]) => `
+      <div class="explore-stat-card">
+        <div class="explore-stat-value">${(s[key] ?? 0).toLocaleString()}</div>
+        <div class="explore-stat-label">${label}</div>
+      </div>`).join("");
+
+    const criticalTotal = (data.categories || []).reduce((n, c) => n + (c.critical_count || 0), 0);
+    const warningTotal = (data.categories || []).reduce((n, c) => n + (c.warning_count || 0), 0);
+    const totalFindings = (data.categories || []).reduce((n, c) => n + (c.findings || []).length, 0);
+
+    // First category with a Critical or Warning badge opens by default so
+    // the report doesn't look empty on first load; the rest start collapsed.
+    let openKeySet = false;
+    const categoryCards = (data.categories || []).map(cat => {
+      const shouldOpen = !openKeySet && (cat.critical_count || cat.warning_count);
+      if (shouldOpen) openKeySet = true;
+      return _healthCategoryCard(cat, shouldOpen);
+    }).join("");
+
+    listWrap.innerHTML = `
+      <div class="card health-score-card">
+        <div class="health-score-number ${gradeClass}">${data.score}<span style="font-size:20px;">/100</span></div>
+        <div><span class="health-grade-badge">Grade ${escapeHtml(data.grade)}</span></div>
+        <div class="explore-stats-strip" style="flex:1 1 240px; border:none; padding:0;">
+          <div class="explore-stat-card"><div class="explore-stat-value ${criticalTotal ? "warn" : ""}">${criticalTotal}</div><div class="explore-stat-label">Critical</div></div>
+          <div class="explore-stat-card"><div class="explore-stat-value ${warningTotal ? "accent" : ""}">${warningTotal}</div><div class="explore-stat-label">Warnings</div></div>
+          <div class="explore-stat-card"><div class="explore-stat-value">${totalFindings}</div><div class="explore-stat-label">Total Findings</div></div>
+        </div>
+      </div>
+      <div class="card explore-stats-strip">${statPills}</div>
+      ${categoryCards}`;
+  } catch (err) {
+    listWrap.innerHTML = `<div class="card"><div class="dashboard-empty">Could not load health report: ${escapeHtml(err.message)}</div></div>`;
   }
 }
 
@@ -3426,7 +3605,7 @@ function renderTableDeepAuditPage(detail, snapshotId) {
         <p class="deep-audit-subtitle">Table deep audit &middot; DDR snapshot</p>
       </div>
       <div class="deep-audit-toolbar">
-        <button onclick="downloadTableAuditDocx(${snapshotId}, '${escapeAttr(detail.table_name)}')">Download DOCX</button>
+        <button class="secondary btn-download" onclick="downloadTableAuditDocx(${snapshotId}, '${escapeAttr(detail.table_name)}')">Download DOCX</button>
         <button class="secondary" onclick="downloadTableAuditMarkdown()">Download Markdown</button>
         <button class="secondary" onclick="closeTableDeepAudit()">Back to Table</button>
       </div>
@@ -3966,6 +4145,213 @@ async function deleteSnapshotConfirm(snapshotId, clientId, clientName) {
 
 document.getElementById("dashboard-refresh-btn").addEventListener("click", loadDashboard);
 loadDashboard();
+
+// ---------------------------------------------------------------------
+// GROUP C feature: Releases & Test Packs + Daily Audit.
+// A release names a snapshot pair (baseline -> current) that belongs
+// to one solution; Daily Audit is a per-solution on/off setting plus
+// a "Run Now" button that compares that solution's two most recent
+// snapshots. Both live under the same client -> solution picker.
+// ---------------------------------------------------------------------
+
+async function loadReleaseSolutionOptions() {
+  const clientId = document.getElementById("releases-client-select").value;
+  const solutionSelect = document.getElementById("releases-solution-select");
+  document.getElementById("daily-audit-card").style.display = "none";
+  document.getElementById("release-create-card").style.display = "none";
+  document.getElementById("releases-list-wrap").innerHTML = "";
+
+  if (!clientId) {
+    solutionSelect.innerHTML = `<option value="">Choose a solution...</option>`;
+    solutionSelect.disabled = true;
+    return;
+  }
+  solutionSelect.disabled = false;
+  solutionSelect.innerHTML = `<option value="">Loading...</option>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/clients/${clientId}/solutions`);
+    const solutions = await res.json();
+    solutionSelect.innerHTML = solutions.length
+      ? `<option value="">Choose a solution...</option>` +
+        solutions.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${s.snapshot_count})</option>`).join("")
+      : `<option value="">No solutions for this client yet</option>`;
+  } catch (err) {
+    solutionSelect.innerHTML = `<option value="">Could not load solutions</option>`;
+  }
+}
+
+async function onReleaseSolutionChange() {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  if (!solutionId) {
+    document.getElementById("daily-audit-card").style.display = "none";
+    document.getElementById("release-create-card").style.display = "none";
+    document.getElementById("releases-list-wrap").innerHTML = "";
+    return;
+  }
+  document.getElementById("daily-audit-card").style.display = "block";
+  document.getElementById("release-create-card").style.display = "block";
+  await Promise.all([
+    loadDailyAuditSetting(),
+    loadReleaseSnapshotOptions(),
+    loadReleasesList(),
+  ]);
+}
+
+async function loadDailyAuditSetting() {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  try {
+    const res = await fetch(`${API_BASE}/api/solutions/${solutionId}/daily-audit`);
+    const setting = await res.json();
+    const toggle = document.getElementById("daily-audit-toggle");
+    toggle.checked = !!setting.enabled;
+    document.getElementById("daily-audit-status").textContent = setting.enabled
+      ? "On -- comparisons can be run any time with \"Run Now\"."
+      : "Off -- turn on to enable daily comparisons of this solution's two latest snapshots.";
+    document.getElementById("daily-audit-last-result").textContent = setting.last_run_at
+      ? `Last run: ${new Date(setting.last_run_at).toLocaleString()} -- ${setting.last_result_summary}`
+      : "Never run yet.";
+  } catch (err) {
+    console.error("Could not load daily audit setting:", err);
+  }
+}
+
+document.getElementById("daily-audit-toggle").addEventListener("change", async (e) => {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  if (!solutionId) return;
+  try {
+    await fetch(`${API_BASE}/api/solutions/${solutionId}/daily-audit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: e.target.checked }),
+    });
+    await loadDailyAuditSetting();
+  } catch (err) {
+    alert("Could not update Daily Audit: " + err.message);
+  }
+});
+
+document.getElementById("daily-audit-run-btn").addEventListener("click", async () => {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  if (!solutionId) return;
+  const btn = document.getElementById("daily-audit-run-btn");
+  btn.disabled = true;
+  btn.textContent = "Running...";
+  try {
+    await fetch(`${API_BASE}/api/solutions/${solutionId}/daily-audit/run`, { method: "POST" });
+    await loadDailyAuditSetting();
+  } catch (err) {
+    alert("Could not run Daily Audit: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run Now";
+  }
+});
+
+async function loadReleaseSnapshotOptions() {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  const baselineSelect = document.getElementById("release-baseline-select");
+  const currentSelect = document.getElementById("release-current-select");
+  try {
+    const res = await fetch(`${API_BASE}/api/snapshots?solution_id=${solutionId}`);
+    const snapshots = await res.json();
+    const optionsHtml = snapshots.length
+      ? snapshots.map(s => `<option value="${s.id}">${escapeHtml(s.filename)} (${new Date(s.created_at).toLocaleDateString()})</option>`).join("")
+      : `<option value="">No snapshots for this solution yet</option>`;
+    baselineSelect.innerHTML = `<option value="">Baseline (older) snapshot...</option>` + optionsHtml;
+    currentSelect.innerHTML = `<option value="">Current (newer) snapshot...</option>` + optionsHtml;
+  } catch (err) {
+    console.error("Could not load snapshots for releases:", err);
+  }
+}
+
+async function loadReleasesList() {
+  const solutionId = document.getElementById("releases-solution-select").value;
+  const wrap = document.getElementById("releases-list-wrap");
+  wrap.innerHTML = `<div class="card"><p class="card-label" style="margin:0;">Releases</p></div>`;
+  try {
+    const res = await fetch(`${API_BASE}/api/solutions/${solutionId}/releases`);
+    const releases = await res.json();
+    if (!releases.length) {
+      wrap.innerHTML = `<div class="card"><p class="card-label" style="margin:0 0 8px;">Releases</p><div class="snapshot-empty">No releases yet. Use the form above to create one from a snapshot pair.</div></div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="card">
+        <p class="card-label" style="margin:0 0 10px;">Releases (${releases.length})</p>
+        ${releases.map(r => `
+          <div class="release-row">
+            <div class="release-row-info">
+              <span class="release-row-title">${escapeHtml(r.name)}</span>
+              <span class="release-row-sub">${new Date(r.created_at).toLocaleString()}${r.notes ? " &middot; " + escapeHtml(r.notes) : ""}</span>
+            </div>
+            <button class="secondary" onclick="compareReleaseSnapshots(${r.baseline_snapshot_id}, ${r.current_snapshot_id})">Compare</button>
+            <button class="secondary" onclick="deleteReleaseConfirm(${r.id})">Delete</button>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } catch (err) {
+    wrap.innerHTML = `<div class="card"><div class="snapshot-empty">Could not load releases: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+function compareReleaseSnapshots(baselineId, currentId) {
+  // Reuses the existing Compare Snapshots flow on the Snapshot History
+  // tab -- no separate rendering code needed for a release's diff.
+  switchTab("snapshots");
+  selectedForCompare = new Set([baselineId, currentId]);
+  updateCompareHint();
+  document.getElementById("ddr-compare-btn").click();
+}
+
+async function deleteReleaseConfirm(releaseId) {
+  if (!confirm("Delete this release? This cannot be undone (the underlying snapshots are not affected).")) return;
+  try {
+    await fetch(`${API_BASE}/api/releases/${releaseId}`, { method: "DELETE" });
+    loadReleasesList();
+  } catch (err) {
+    alert("Could not delete release: " + err.message);
+  }
+}
+
+document.getElementById("release-create-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const solutionId = document.getElementById("releases-solution-select").value;
+  const name = document.getElementById("release-name-input").value.trim();
+  const baselineId = document.getElementById("release-baseline-select").value;
+  const currentId = document.getElementById("release-current-select").value;
+  const notes = document.getElementById("release-notes-input").value.trim();
+  const status = document.getElementById("release-create-status");
+
+  if (!baselineId || !currentId) {
+    status.textContent = "Choose both a baseline and a current snapshot.";
+    return;
+  }
+  if (baselineId === currentId) {
+    status.textContent = "Baseline and current must be two different snapshots.";
+    return;
+  }
+  status.textContent = "Saving...";
+  try {
+    const res = await fetch(`${API_BASE}/api/solutions/${solutionId}/releases`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name, baseline_snapshot_id: Number(baselineId), current_snapshot_id: Number(currentId), notes,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { status.textContent = data.error || "Could not save release."; return; }
+    document.getElementById("release-create-form").reset();
+    status.textContent = "";
+    loadReleasesList();
+  } catch (err) {
+    status.textContent = "Error: " + err.message;
+  }
+});
+
+document.getElementById("releases-client-select").addEventListener("change", loadReleaseSolutionOptions);
+document.getElementById("releases-solution-select").addEventListener("change", onReleaseSolutionChange);
 </script>
 
 </body>

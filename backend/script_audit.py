@@ -8,6 +8,19 @@ professional script inventory directly from a saved snapshot instead.
 from call_chain import _build_call_graph, _is_in_cycle
 
 
+def _is_separator(script: dict) -> bool:
+    """FileMaker's Manage Scripts list lets you insert visual
+    separator lines between scripts. The DDR still exports these as
+    a real <Script> element -- typically named "-" (or blank) with
+    zero steps. They are not actual scripts and must not show up as
+    rows in the audit table or count toward Scripts / Unused Scripts."""
+    name = (script.get("name") or "").strip()
+    steps = script.get("steps") or []
+    if steps:
+        return False
+    return name == "" or set(name) <= {"-"}
+
+
 RISKY_STEPS = {
     "Insert from URL", "Perform Script on Server", "Import Records",
     "Execute SQL", "Open ODBC Connection", "Export Records",
@@ -84,7 +97,9 @@ def build_script_summary(data: dict) -> list[dict]:
     outgoing, incoming = _build_call_graph({"scripts": scripts})
     result = []
     for script in scripts:
-        name = script.get("name", "Unnamed script")
+        if _is_separator(script):
+            continue
+        name = script.get("name") or "Unnamed script"
         steps = script.get("steps", [])
         issues = _issues_for_script(script, outgoing)
         result.append({
